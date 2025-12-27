@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<div th:fragment="main-nav">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">🚗 Komis Samochodowy</a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav">
+                    <a class="nav-link" href="/samochody">Samochody</a>
+                    <a class="nav-link" href="/search">
+                        <i class="fas fa-search me-1"></i> Wyszukiwanie
+                    </a>
+                    <a class="nav-link" th:href="@{/zakupy/moje}"
+                       sec:authorize="isAuthenticated() and !hasRole('ADMIN')">
+                        <i class="fas fa-shopping-cart me-1"></i> Moje zakupy
+                    </a>
+
+                    <div sec:authorize="hasRole('ADMIN')" class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            Admin
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/admin">Panel Admina</a></li>
+                            <li><a class="dropdown-item" href="/admin/users">Użytkownicy</a></li>
+                            <li><a class="dropdown-item" href="/klienci">Klienci</a></li>
+                            <li><a class="dropdown-item" href="/pracownicy">Pracownicy</a></li>
+                            <!-- SERWIS W DROPDOWNIE TYLKO DLA ADMINÓW -->
+                            <li><a class="dropdown-item" href="/serwis">
+                                <i class="fas fa-tools me-1"></i> Serwis
+                            </a></li>
+                            <!-- DLA ADMINA: WSZYSTKIE ZAKUPY -->
+                            <li><a class="dropdown-item" href="/zakupy">
+                                <i class="fas fa-shopping-cart me-1"></i> Wszystkie zakupy
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="navbar-nav ms-auto">
+                    <div sec:authorize="isAuthenticated()">
+                        <span class="navbar-text me-3">Witaj, <span sec:authentication="name"></span></span>
+                        <a class="nav-link" href="#" th:href="@{/logout}">Wyloguj</a>
+                    </div>
+                    <div sec:authorize="!isAuthenticated()">
+                        <a class="nav-link" href="/login">Zaloguj</a>
+                        <a class="nav-link" href="/register">Rejestracja</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+</div>
+</html>

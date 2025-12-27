@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Kup z wykorzystaniem salda premii</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/">🚗 Komis Samochodowy</a>
+        <div class="navbar-nav ms-auto">
+            <div sec:authorize="isAuthenticated()">
+                <span class="navbar-text me-3">Witaj, <span sec:authentication="name"></span></span>
+                <a class="nav-link d-inline" href="#" th:href="@{/logout}">Wyloguj</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-wallet me-2"></i>Kup z wykorzystaniem salda premii</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Informacje o kliencie -->
+                    <div class="alert alert-info mb-4">
+                        <h5><i class="fas fa-user me-2"></i>Twoje dane</h5>
+                        <p><strong>Twoje saldo premii:</strong>
+                            <span class="badge bg-success fs-6">
+                               <span th:text="${#numbers.formatDecimal(saldoKlienta, 0, 'COMMA', 2, 'POINT')}"></span> zł
+                           </span>
+                        </p>
+                        <p th:if="${procentPremii > 0}">
+                            <strong>Twój procent premii:</strong>
+                            <span class="badge bg-warning fs-6">
+                                <span th:text="${procentPremii}"></span>%
+                            </span>
+                            <span th:if="${premiaOdZakupu != null}" class="ms-2">
+                                (z tego zakupu otrzymasz dodatkowo:
+                                <strong th:text="${#numbers.formatDecimal(premiaOdZakupu, 0, 'COMMA', 2, 'POINT')}"></span> zł premii)
+                            </span>
+                        </p>
+                    </div>
+
+                    <!-- Informacja o statusie samochodu -->
+                    <div th:if="${samochod.status == 'ZAREZERWOWANY'}" class="alert alert-warning mb-3">
+                        <h5><i class="fas fa-bookmark me-2"></i>Uwaga: Samochód zarezerwowany</h5>
+                        <p>Ten samochód jest obecnie zarezerwowany. Tylko Ty możesz go kupić, ponieważ to Ty go zarezerwowałeś.</p>
+                        <p><strong>Data rezerwacji:</strong> <span th:text="${samochod.dataRezerwacji}"></span></p>
+                    </div>
+
+                    <div th:if="${samochod.status != 'DOSTEPNY' and samochod.status != 'ZAREZERWOWANY'}"
+                         class="alert alert-danger mb-3">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>Samochód niedostępny</h5>
+                        <p>Niestety, ten samochód nie jest już dostępny do zakupu. Status:
+                            <span th:text="${samochod.status}"></span></p>
+                        <a th:href="@{/samochody}" class="btn btn-sm btn-outline-primary mt-2">
+                            <i class="fas fa-car me-1"></i> Zobacz dostępne samochody
+                        </a>
+                    </div>
+
+                    <!-- Formularz -->
+                    <form th:action="@{/zakupy/wykorzystaj-saldo}" method="post">
+                        <input type="hidden" name="samochodId" th:value="${samochodId}">
+                        <input type="hidden" name="cenaBazowa" th:value="${cenaBazowa}">
+
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Cena samochodu:</strong></label>
+                            <div class="form-control-plaintext">
+                                <span class="fs-4 text-success fw-bold">
+                                    <span th:text="${#numbers.formatDecimal(cenaBazowa, 0, 'COMMA', 2, 'POINT')}"></span> zł
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="wykorzystaneSaldo" class="form-label">
+                                <strong>Kwota do wykorzystania z salda:</strong>
+                                <small class="text-muted ms-2">(maks. <span th:text="${#numbers.formatDecimal(maksWykorzystanie, 0, 'COMMA', 2, 'POINT')}"></span> zł)</small>
+                            </label>
+                            <input type="number"
+                                   class="form-control"
+                                   id="wykorzystaneSaldo"
+                                   name="wykorzystaneSaldo"
+                                   min="0"
+                                   th:max="${maksWykorzystanie}"
+                                   step="0.01"
+                                   placeholder="Wpisz kwotę do wykorzystania">
+                            <div class="form-text">
+                                Możesz wykorzystać maksymalnie <span th:text="${#numbers.formatDecimal(maksWykorzystanie, 0, 'COMMA', 2, 'POINT')}"></span> zł z Twojego salda.
+                                Pozostaw puste, jeżeli nie chcesz wykorzystywać salda.
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="pracownikId" class="form-label"><strong>Wybierz pracownika:</strong></label>
+                            <select class="form-select" id="pracownikId" name="pracownikId" required>
+                                <option value="">-- Wybierz pracownika --</option>
+                                <!-- Dynamiczna lista pracowników z bazy -->
+                                <option th:each="pracownik : ${pracownicy}"
+                                        th:value="${pracownik.id}"
+                                        th:text="${pracownik.imie + ' ' + pracownik.nazwisko + ' (' + pracownik.stanowisko + ')'}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Podsumowanie -->
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-calculator me-2"></i>Podsumowanie:</h6>
+                            <p id="podsumowanie">
+                                Cena końcowa: <span class="fw-bold">
+                                    <span th:text="${#numbers.formatDecimal(cenaBazowa, 0, 'COMMA', 2, 'POINT')}"></span> zł
+                                </span>
+                            </p>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-check-circle me-2"></i>Potwierdź zakup
+                            </button>
+                            <a th:href="@{/samochody/szczegoly(id=${samochodId})}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Powrót do szczegółów samochodu
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Skrypt do dynamicznego obliczania ceny końcowej
+    document.getElementById('wykorzystaneSaldo').addEventListener('input', function() {
+        const cenaBazowa = [[${cenaBazowa}]];
+        const wykorzystaneSaldo = parseFloat(this.value) || 0;
+        const cenaKoncowa = cenaBazowa - wykorzystaneSaldo;
+
+        document.getElementById('podsumowanie').innerHTML = `
+            <strong>Cena końcowa:</strong> <span class="fw-bold">${cenaKoncowa.toFixed(2)} zł</span><br>
+            <small class="text-muted">
+                (Cena bazowa: ${cenaBazowa.toFixed(2)} zł -
+                Wykorzystane saldo: ${wykorzystaneSaldo.toFixed(2)} zł)
+            </small>
+        `;
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

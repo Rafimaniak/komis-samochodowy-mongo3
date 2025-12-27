@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Szybkie wyszukiwanie - Komis Samochodowy</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/">🚗 Komis Samochodowy</a>
+        <div class="navbar-nav ms-auto">
+            <a class="nav-link" href="/search">Zaawansowane wyszukiwanie</a>
+            <a class="nav-link" href="/samochody">Wszystkie samochody</a>
+            <a class="nav-link" href="/">Strona główna</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-bolt me-2"></i>Szybkie wyszukiwanie</h1>
+        <span class="badge bg-primary fs-6" th:text="'Znaleziono: ' + ${resultsCount} + ' samochodów'"></span>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Kryteria wyszukiwania</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4" th:if="${searchMarka}">
+                    <strong>Marka:</strong> <span th:text="${searchMarka}"></span>
+                </div>
+                <div class="col-md-4" th:if="${searchModel}">
+                    <strong>Model:</strong> <span th:text="${searchModel}"></span>
+                </div>
+                <div class="col-md-4" th:if="${searchStatus}">
+                    <strong>Status:</strong> <span th:text="${searchStatus}"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${samochody.empty}" class="alert alert-info text-center">
+        <i class="fas fa-info-circle fa-2x mb-3"></i><br>
+        Nie znaleziono samochodów spełniających podane kryteria.
+        <div class="mt-3">
+            <a href="/search" class="btn btn-primary me-2">Zaawansowane wyszukiwanie</a>
+            <a href="/samochody" class="btn btn-outline-primary">Zobacz wszystkie samochody</a>
+        </div>
+    </div>
+
+    <div th:if="${!samochody.empty}" class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+            <tr>
+                <th>Marka</th>
+                <th>Model</th>
+                <th>Rok</th>
+                <th>Przebieg</th>
+                <th>Paliwo</th>
+                <th>Cena</th>
+                <th>Status</th>
+                <th>Akcje</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="samochod : ${samochody}">
+                <td th:text="${samochod.marka}"></td>
+                <td th:text="${samochod.model}"></td>
+                <td th:text="${samochod.rokProdukcji}"></td>
+                <td th:text="${#numbers.formatInteger(samochod.przebieg, 0, 'COMMA') + ' km'}"></td>
+                <td th:text="${samochod.rodzajPaliwa}"></td>
+                <td>
+                    <strong th:text="${#numbers.formatDecimal(samochod.cena, 0, 'COMMA', 2, 'POINT') + ' zł'}"></strong>
+                </td>
+                <td>
+                    <span th:if="${samochod.status == 'DOSTEPNY'}" class="badge bg-success">Dostępny</span>
+                    <span th:if="${samochod.status == 'SPRZEDANY'}" class="badge bg-danger">Sprzedany</span>
+                    <span th:if="${samochod.status == 'ZAREZERWOWANY'}" class="badge bg-warning">Zarezerwowany</span>
+                </td>
+                <td>
+                    <a th:href="@{/samochody/szczegoly(id=${samochod.id})}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-eye"></i> Szczegóły
+                    </a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4">
+        <a href="/search" class="btn btn-primary">
+            <i class="fas fa-search me-1"></i> Zaawansowane wyszukiwanie
+        </a>
+        <a href="/samochody" class="btn btn-outline-secondary ms-2">
+            <i class="fas fa-list me-1"></i> Wszystkie samochody
+        </a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

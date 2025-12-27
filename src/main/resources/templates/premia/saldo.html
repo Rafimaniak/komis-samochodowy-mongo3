@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Moje saldo premii</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+</head>
+<body>
+<h1>Moje saldo premii</h1>
+
+<div th:if="${klient}">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Stan konta premii</h5>
+            <p><strong>Saldo dostępne:</strong> <span th:text="${saldo}">0.00</span> zł</p>
+            <p><strong>Procent premii na następny zakup:</strong> <span th:text="${procentPremii}">0</span>%</p>
+            <p><strong>Liczba dokonanych zakupów:</strong> <span th:text="${liczbaZakupow}">0</span></p>
+            <p><strong>Łącznie wydano:</strong> <span th:text="${totalWydane}">0.00</span> zł</p>
+
+            <div class="alert alert-info mt-3">
+                <h6>Jak działają premie?</h6>
+                <ul>
+                    <li>Po 2 zakupach: 5% premii</li>
+                    <li>Po 3 zakupach: 10% premii</li>
+                    <li>Po 5 zakupach: 15% premii</li>
+                    <li>Premia jest naliczana od ceny bazowej samochodu</li>
+                    <li>Saldo możesz wykorzystać przy kolejnych zakupach</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:unless="${klient}" class="alert alert-warning">
+    Nie jesteś zarejestrowany jako klient. Skontaktuj się z administracją.
+</div>
+
+<a th:href="@{/}" class="btn btn-secondary">Powrót</a>
+</body>
+</html>

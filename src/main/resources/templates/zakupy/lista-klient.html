@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moje zakupy - Komis Samochodowy</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Custom styles -->
+    <style>
+        body {
+            padding-top: 70px;
+            background-color: #f8f9fa;
+        }
+
+        .stat-card {
+            padding: 20px;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .stat-card h6 {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .stat-card h3 {
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .car-info {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .navbar-custom {
+            background-color: #343a40;
+        }
+    </style>
+</head>
+<body>
+<!-- Simple Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top navbar-custom">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <i class="fas fa-car"></i> Komis Samochodowy
+        </a>
+        <div class="navbar-nav ms-auto">
+            <a class="nav-link" href="/samochody">
+                <i class="fas fa-list"></i> Samochody
+            </a>
+            <a class="nav-link active" href="/zakupy/moje">
+                <i class="fas fa-shopping-cart"></i> Moje zakupy
+            </a>
+            <a class="nav-link" href="/logout">
+                <i class="fas fa-sign-out-alt"></i> Wyloguj
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <!-- Komunikaty -->
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${successMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <!-- Panel salda premii -->
+    <div th:if="${klient}" class="card mb-4 shadow">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0"><i class="fas fa-wallet"></i> Moje konto premii</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h6 class="text-muted">Saldo premii</h6>
+                        <h3 class="text-success">
+                            <span th:if="${klient.saldoPremii != null and klient.saldoPremii.compareTo(0) == 0}">💰 0 zł</span>
+                            <span th:if="${klient.saldoPremii != null and klient.saldoPremii.compareTo(0) != 0}"
+                                  th:text="${'💰 ' + #numbers.formatDecimal(klient.saldoPremii, 0, 'COMMA', 2, 'POINT') + ' zł'}"></span>
+                            <span th:if="${klient.saldoPremii == null}">💰 0 zł</span>
+                        </h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h6 class="text-muted">Procent premii</h6>
+                        <h3 th:text="${klient.procentPremii != null ? klient.procentPremii + ' %' : '0 %'}"></h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h6 class="text-muted">Liczba zakupów</h6>
+                        <h3 th:text="${klient.liczbaZakupow != null ? klient.liczbaZakupow : 0}"></h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h6 class="text-muted">Łącznie wydano</h6>
+                        <h3 class="text-primary">
+                            <span th:if="${klient.totalWydane != null and klient.totalWydane.compareTo(0) == 0}">0 zł</span>
+                            <span th:if="${klient.totalWydane != null and klient.totalWydane.compareTo(0) != 0}"
+                                  th:text="${#numbers.formatDecimal(klient.totalWydane, 0, 'COMMA', 2, 'POINT') + ' zł'}"></span>
+                            <span th:if="${klient.totalWydane == null}">0 zł</span>
+                        </h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert-info mt-3 p-3 border rounded">
+            <h6><i class="fas fa-info-circle"></i> Jak działa system premii?</h6>
+                <p class="mb-0 small">
+                    1. Za każdy zakup otrzymujesz premię jako procent od wartości zakupu.<br>
+                    2. Premia jest dodawana do Twojego konta w postaci realnych pieniędzy.<br>
+                    3. Zebrane środki możesz wykorzystać przy kolejnych zakupach.<br>
+                    4. Procent premii rośnie z liczbą zakupów: 2 zakupy = 5%, 3 zakupy = 10%, 5+ zakupów = 15%.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista zakupów -->
+    <div class="card shadow">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-history"></i> Historia zakupów</h5>
+        </div>
+        <div class="card-body">
+            <div th:if="${zakupy != null and !zakupy.isEmpty()}">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                        <tr>
+                            <th>Data</th>
+                            <th>Samochód</th>
+                            <th class="text-end">Cena bazowa</th>
+                            <th class="text-end">Wykorzystane saldo</th>
+                            <th class="text-end">Naliczona premia</th>
+                            <th class="text-end">Cena końcowa</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="zakup : ${zakupy}">
+                            <td th:text="${#temporals.format(zakup.dataZakupu, 'dd.MM.yyyy')}"></td>
+                            <td>
+                                <strong th:text="${zakup.samochod.marka + ' ' + zakup.samochod.model}"></strong><br>
+                                <small class="text-muted" th:text="${zakup.samochod.rokProdukcji + ', ' + zakup.samochod.przebieg + 'km'}"></small>
+                            </td>
+                            <td class="text-end">
+                                <span th:if="${zakup.cenaBazowa != null and zakup.cenaBazowa.compareTo(0) == 0}">0 zł</span>
+                                <span th:if="${zakup.cenaBazowa != null and zakup.cenaBazowa.compareTo(0) != 0}"
+                                      th:text="${#numbers.formatDecimal(zakup.cenaBazowa, 0, 'COMMA', 2, 'POINT') + ' zł'}"></span>
+                                <span th:if="${zakup.cenaBazowa == null}">0 zł</span>
+                            </td>
+                            <td class="text-end">
+                                    <span th:if="${zakup.wykorzystaneSaldo != null and zakup.wykorzystaneSaldo > 0}"
+                                          class="text-success fw-bold">
+                                        -<span th:text="${#numbers.formatDecimal(zakup.wykorzystaneSaldo, 0, 'COMMA', 2, 'POINT')}"></span> zł
+                                    </span>
+                                <span th:if="${zakup.wykorzystaneSaldo == null or zakup.wykorzystaneSaldo.compareTo(0) == 0}"
+                                      class="text-muted">
+                                        0 zł
+                                    </span>
+                            </td>
+                            <td class="text-end">
+                                    <span th:if="${zakup.naliczonaPremia != null and zakup.naliczonaPremia > 0}"
+                                          class="text-info fw-bold">
+                                        +<span th:text="${#numbers.formatDecimal(zakup.naliczonaPremia, 0, 'COMMA', 2, 'POINT')}"></span> zł
+                                    </span>
+                                <span th:if="${zakup.naliczonaPremia == null or zakup.naliczonaPremia.compareTo(0) == 0}"
+                                      class="text-muted">
+                                        0 zł
+                                    </span>
+                            </td>
+                            <td class="text-end fw-bold">
+                                <span th:if="${zakup.cenaZakupu != null and zakup.cenaZakupu.compareTo(0) == 0}">0 zł</span>
+                                <span th:if="${zakup.cenaZakupu != null and zakup.cenaZakupu.compareTo(0) != 0}"
+                                      th:text="${#numbers.formatDecimal(zakup.cenaZakupu, 0, 'COMMA', 2, 'POINT') + ' zł'}"></span>
+                                <span th:if="${zakup.cenaZakupu == null}">0 zł</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                        <tfoot class="table-active">
+                        <tr>
+                            <th colspan="2">Razem</th>
+                            <th class="text-end">
+                                <span th:if="${sumaCenaBazowa != null and sumaCenaBazowa.compareTo(0) == 0}">0 zł</span>
+                                <span th:if="${sumaCenaBazowa != null and sumaCenaBazowa.compareTo(0) != 0}"
+                                      th:text="${#numbers.formatDecimal(sumaCenaBazowa, 0, 'COMMA', 2, 'POINT') + ' zł'}"></span>
+                            </th>
+                            <th class="text-end text-success">
+                                <span th:if="${sumaWykorzystaneSaldo != null and sumaWykorzystaneSaldo.compareTo(0) == 0}">0 zł</span>
+                                <span th:if="${sumaWykorzystaneSaldo != null and sumaWykorzystaneSaldo.compareTo(0) != 0}"
+                                      th:text="${'-' + #numbers.formatDecimal(sumaWykorzystaneSaldo, 0, 'COMMA', 2, 'POINT') + ' zł'}"></span>
+                            </th>
+                            <th class="text-end text-info">
+                                <span th:if="${sumaNaliczonaPremia != null and sumaNaliczonaPremia.compareTo(0) == 0}">0 zł</span>
+                                <span th:if="${sumaNaliczonaPremia != null and sumaNaliczonaPremia.compareTo(0) != 0}"
+                                      th:text="${'+' + #numbers.formatDecimal(sumaNaliczonaPremia, 0, 'COMMA', 2, 'POINT') + ' zł'}"></span>
+                            </th>
+                            <th class="text-end fw-bold">
+                                <span th:if="${sumaCenaZakupu != null and sumaCenaZakupu.compareTo(0) == 0}">0 zł</span>
+                                <span th:if="${sumaCenaZakupu != null and sumaCenaZakupu.compareTo(0) != 0}"
+                                      th:text="${#numbers.formatDecimal(sumaCenaZakupu, 0, 'COMMA', 2, 'POINT') + ' zł'}"></span>
+                            </th>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Statystyki -->
+                <div class="row mt-4">
+                    <div class="col-md-3">
+                        <div class="stat-card border-primary">
+                            <h6 class="text-muted">Łącznie wydano</h6>
+                            <h4 class="text-primary">
+                                <span th:if="${sumaCenaZakupu != null and sumaCenaZakupu.compareTo(0) == 0}">0 zł</span>
+                                <span th:if="${sumaCenaZakupu != null and sumaCenaZakupu.compareTo(0) != 0}"
+                                      th:text="${#numbers.formatDecimal(sumaCenaZakupu, 0, 'COMMA', 2, 'POINT') + ' zł'}"></span>
+                            </h4>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card border-success">
+                            <h6 class="text-muted">Wykorzystano salda</h6>
+                            <h4 class="text-success">
+                                <span th:if="${sumaWykorzystaneSaldo != null and sumaWykorzystaneSaldo.compareTo(0) == 0}">0 zł</span>
+                                <span th:if="${sumaWykorzystaneSaldo != null and sumaWykorzystaneSaldo.compareTo(0) != 0}"
+                                      th:text="${#numbers.formatDecimal(sumaWykorzystaneSaldo, 0, 'COMMA', 2, 'POINT') + ' zł'}"></span>
+                            </h4>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card border-info">
+                            <h6 class="text-muted">Zebrane premie</h6>
+                            <h4 class="text-info">
+                                <span th:if="${sumaNaliczonaPremia != null and sumaNaliczonaPremia.compareTo(0) == 0}">0 zł</span>
+                                <span th:if="${sumaNaliczonaPremia != null and sumaNaliczonaPremia.compareTo(0) != 0}"
+                                      th:text="${#numbers.formatDecimal(sumaNaliczonaPremia, 0, 'COMMA', 2, 'POINT') + ' zł'}"></span>
+                            </h4>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card border-secondary">
+                            <h6 class="text-muted">Ilość zakupów</h6>
+                            <h4 th:text="${zakupy.size()}"></h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Brak zakupów -->
+            <div th:if="${zakupy == null or zakupy.isEmpty()}" class="text-center py-5">
+                <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">Nie masz jeszcze żadnych zakupów</h4>
+                <p class="text-muted mb-4">Zrób pierwszy zakup, aby zacząć korzystać z systemu premii!</p>
+                <a href="/samochody" class="btn btn-primary">
+                    <i class="fas fa-car"></i> Przejdź do listy samochodów
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Przycisk powrotu -->
+    <div class="mt-3">
+        <a href="/samochody" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Wróć do listy samochodów
+        </a>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Auto-close alerts -->
+<script>
+    setTimeout(function() {
+        var alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            var bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+</script>
+</body>
+</html>

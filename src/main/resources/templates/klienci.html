@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${tytul}">Lista Klientów</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            padding-top: 70px;
+            background-color: #f8f9fa;
+        }
+
+        /* Styl dla tabeli aby przyciski były poziomo */
+        .btn-group-horizontal {
+            display: flex;
+            flex-wrap: nowrap;
+        }
+        .btn-group-horizontal .btn {
+            white-space: nowrap;
+        }
+        /* Zmniejsz wysokość wierszy tabeli */
+        .table > tbody > tr > td {
+            padding: 0.5rem;
+            vertical-align: middle;
+        }
+        .table > thead > tr > th {
+            padding: 0.75rem;
+            vertical-align: middle;
+        }
+
+        .navbar-custom {
+            background-color: #343a40 !important;
+        }
+
+        .stat-card {
+            padding: 20px;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .stat-card h6 {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .stat-card h2, .stat-card h4 {
+            margin: 0;
+            font-weight: bold;
+        }
+
+        /* Poprawki dla lepszej czytelności */
+        .badge {
+            text-shadow: none;
+            box-shadow: none;
+            font-weight: 600;
+            padding: 0.4em 0.65em;
+        }
+
+        /* Statystyki - lepsza czytelność */
+        .stat-card .text-primary {
+            color: #0a58ca !important;
+        }
+        .stat-card .text-success {
+            color: #146c43 !important;
+        }
+        .stat-card .text-info {
+            color: #0aa2c0 !important;
+        }
+        .stat-card .text-warning {
+            color: #e0a800 !important;
+        }
+
+        /* Poprawa czytelności tekstu w tabeli */
+        .table td, .table th {
+            text-shadow: none;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Fixed Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top navbar-custom">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+            <i class="fas fa-car"></i> Komis Samochodowy
+        </a>
+
+        <!-- Przycisk hamburger menu dla mobilnych -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Menu główne -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <!-- Menu dla admina -->
+            <ul class="navbar-nav" sec:authorize="hasRole('ADMIN')">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/admin}"><i class="fas fa-tachometer-alt"></i> Panel Admina</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/admin/users}"><i class="fas fa-user-friends"></i> Użytkownicy</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" th:href="@{/klienci}"><i class="fas fa-users"></i> Klienci</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/pracownicy}"><i class="fas fa-id-badge"></i> Pracownicy</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/serwis}"><i class="fas fa-tools"></i> Serwis</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/zakupy}"><i class="fas fa-shopping-cart"></i> Wszystkie zakupy</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/zakupy/rabaty}"><i class="fas fa-gift"></i> Premie</a>
+                </li>
+            </ul>
+
+            <!-- Menu ogólne (dostępne dla wszystkich) -->
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="/samochody"><i class="fas fa-car"></i> Samochody</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/search"><i class="fas fa-search"></i> Wyszukiwanie</a>
+                </li>
+            </ul>
+
+            <!-- Informacje o użytkowniku i wylogowanie -->
+            <ul class="navbar-nav ms-auto" sec:authorize="isAuthenticated()">
+                <li class="nav-item">
+                    <span class="navbar-text me-3">
+                        <i class="fas fa-user"></i> <span sec:authentication="name"></span>
+                    </span>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/logout}">
+                        <i class="fas fa-sign-out-alt"></i> Wyloguj
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-3">
+    <h1 class="mb-4" th:text="${tytul}">Lista Klientów</h1>
+
+    <!-- Statystyki systemu premii -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card border-primary">
+                <h6><i class="fas fa-users"></i> Łącznie klientów</h6>
+                <h2 class="text-primary" th:text="${totalKlienci}">0</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card border-success">
+                <h6><i class="fas fa-gift"></i> Klienci z premią</h6>
+                <h2 class="text-success" th:text="${klienciZPremia}">0</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card border-info">
+                <h6><i class="fas fa-wallet"></i> Łączne saldo</h6>
+                <h4 class="text-info" th:text="${'💰 ' + #numbers.formatInteger(totalSaldo, 0, 'WHITESPACE') + ' zł'}"></h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card border-warning">
+                <h6><i class="fas fa-money-bill-wave"></i> Łącznie wydano</h6>
+                <h4 class="text-warning" th:text="${#numbers.formatInteger(totalWydane, 0, 'WHITESPACE') + ' zł'}"></h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Imię</th>
+                        <th>Nazwisko</th>
+                        <th>Email</th>
+                        <th>Telefon</th>
+                        <th>Liczba zakupów</th>
+                        <th>Procent premii</th>
+                        <th>Saldo premii</th>
+                        <th>Łącznie wydano</th>
+                        <th>Akcje</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="klient : ${klienci}">
+                        <td th:text="${klient.id}"></td>
+                        <td th:text="${klient.imie}"></td>
+                        <td th:text="${klient.nazwisko}"></td>
+                        <td th:text="${klient.email}"></td>
+                        <td th:text="${klient.telefon}"></td>
+                        <td>
+                                <span th:text="${klient.liczbaZakupow}"
+                                      class="badge"
+                                      th:class="${klient.liczbaZakupow > 0} ? 'bg-primary' : 'bg-secondary'">
+                                </span>
+                        </td>
+                        <td>
+                                <span th:text="${klient.procentPremii} + '%'"
+                                      class="badge"
+                                      th:class="${klient.procentPremii > 0} ? 'bg-success' : 'bg-secondary'">
+                                </span>
+                        </td>
+                        <td>
+                                <span th:with="saldoInteger=${klient.saldoPremii.stripTrailingZeros().scale() <= 0}"
+                                      th:text="${saldoInteger} ?
+                                    ${#numbers.formatInteger(klient.saldoPremii, 0, 'WHITESPACE') + ' zł'} :
+                                    ${#numbers.formatDecimal(klient.saldoPremii, 0, 'WHITESPACE', 2, 'COMMA') + ' zł'}"
+                                      class="badge"
+                                      th:class="${klient.saldoPremii > 0} ? 'bg-info' : 'bg-secondary'">
+                                </span>
+                        </td>
+                        <td th:with="wydaneInteger=${klient.totalWydane.stripTrailingZeros().scale() <= 0}"
+                            th:text="${wydaneInteger} ?
+                                ${#numbers.formatInteger(klient.totalWydane, 0, 'WHITESPACE') + ' zł'} :
+                                ${#numbers.formatDecimal(klient.totalWydane, 0, 'WHITESPACE', 2, 'COMMA') + ' zł'}">
+                        </td>
+                        <td>
+                            <!-- Zmienione: przyciski poziomo bez btn-group -->
+                            <div class="d-flex gap-1">
+                                <a th:href="@{/zakupy/moje/{id}(id=${klient.id})}"
+                                   class="btn btn-outline-primary btn-sm" title="Zakupy klienta">
+                                    <i class="fas fa-shopping-cart"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a th:href="@{/admin}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Powrót do panelu
+        </a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
