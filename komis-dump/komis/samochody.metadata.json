@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"ac9c69127cd44094ae686a2096d32c77","collectionName":"samochody","type":"collection"}
