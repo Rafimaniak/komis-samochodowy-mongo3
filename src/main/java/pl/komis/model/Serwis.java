@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Field;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
@@ -14,26 +14,26 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Serwis {
-
     @Id
     private String id;
 
-    @DBRef
-    private Samochod samochod;
+    @Field("samochod_id")
+    private String samochodId;
 
-    @DBRef
-    private Pracownik pracownik;
+    @Field("pracownik_id")
+    private String pracownikId;
 
+    @Field("opisUslugi")
     private String opisUslugi;
+
     private BigDecimal koszt;
+
+    @Field("dataSerwisu")
     private LocalDate dataSerwisu;
 
+    // Metody pomocnicze
     public String getStatus() {
-        if (koszt == null) {
-            return "ZAREZERWOWANY";
-        } else {
-            return "ZAKOŃCZONY";
-        }
+        return (koszt == null) ? "ZAREZERWOWANY" : "ZAKOŃCZONY";
     }
 
     public boolean isZarezerwowany() {

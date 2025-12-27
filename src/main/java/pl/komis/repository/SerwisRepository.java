@@ -11,20 +11,19 @@ import java.util.List;
 @Repository
 public interface SerwisRepository extends MongoRepository<Serwis, String> {
 
-    List<Serwis> findByDataSerwisuBetween(LocalDate od, LocalDate do_);
-
-    @Query("{'samochod.$id': ?0}")
+    // Używaj nazw pól z modelu (samochodId, pracownikId)
     List<Serwis> findBySamochodId(String samochodId);
-
-    @Query("{'pracownik.$id': ?0}")
     List<Serwis> findByPracownikId(String pracownikId);
 
+    List<Serwis> findByDataSerwisuBetween(LocalDate start, LocalDate end);
+
     @Query("{'koszt': null}")
-    long countReservedServices();
+    List<Serwis> findZarezerwowane();
 
     @Query("{'koszt': {$ne: null}}")
-    long countCompletedServices();
+    List<Serwis> findZakonczone();
 
-    @Query("{'koszt': {$ne: null}}")
-    List<Serwis> findCompletedServices();
+    // ZMIENIONE: Używamy dedykowanych metod zamiast @Query dla count
+    long countByKosztIsNull();
+    long countByKosztIsNotNull();
 }

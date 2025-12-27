@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Lista Usług Serwisowych</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -45,10 +45,22 @@
             <tr th:each="s : ${serwisy}">
                 <td th:text="${s.id}"></td>
                 <td>
-                    <strong th:text="${s.samochod.marka + ' ' + s.samochod.model}"></strong>
-                    <br><small class="text-muted" th:text="'ID: ' + ${s.samochod.id}"></small>
+                    <span th:if="${samochodyMap != null && samochodyMap.containsKey(s.samochodId)}">
+                        <strong th:text="${samochodyMap[s.samochodId].marka + ' ' + samochodyMap[s.samochodId].model}"></strong>
+                        <br><small class="text-muted" th:text="'ID: ' + ${s.samochodId}"></small>
+                    </span>
+                    <span th:unless="${samochodyMap != null && samochodyMap.containsKey(s.samochodId)}">
+                        <span class="text-muted">ID: </span><span th:text="${s.samochodId}"></span>
+                    </span>
                 </td>
-                <td th:text="${s.pracownik.imie + ' ' + s.pracownik.nazwisko}"></td>
+                <td>
+                    <span th:if="${pracownicyMap != null && pracownicyMap.containsKey(s.pracownikId)}"
+                          th:text="${pracownicyMap[s.pracownikId].imie + ' ' + pracownicyMap[s.pracownikId].nazwisko}">
+                    </span>
+                    <span th:unless="${pracownicyMap != null && pracownicyMap.containsKey(s.pracownikId)}">
+                        <span class="text-muted">ID: </span><span th:text="${s.pracownikId}"></span>
+                    </span>
+                </td>
                 <td>
                     <span th:if="${#strings.length(s.opisUslugi) > 50}"
                           th:text="${#strings.substring(s.opisUslugi, 0, 50) + '...'}"></span>
@@ -56,8 +68,11 @@
                           th:text="${s.opisUslugi}"></span>
                 </td>
                 <td>
-                    <strong class="text-success"
-                            th:text="${#numbers.formatDecimal(s.koszt, 0, 2, 'POINT') + ' zł'}"></strong>
+                    <span th:if="${s.koszt != null}">
+                        <strong class="text-success"
+                                th:text="${#numbers.formatDecimal(s.koszt, 0, 2, 'POINT') + ' zł'}"></strong>
+                    </span>
+                    <span th:if="${s.koszt == null}" class="text-muted">-</span>
                 </td>
                 <td th:text="${#temporals.format(s.dataSerwisu, 'dd.MM.yyyy')}"></td>
                 <td>

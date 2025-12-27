@@ -34,11 +34,12 @@ public class KlientPromocjaService {
     // Metoda pomocnicza do dodania promocji dla klienta
     public KlientPromocja przypiszPromocjeKlientowi(String klientId, String promocjaId) {
         KlientPromocja klientPromocja = KlientPromocja.builder()
+                .klientId(klientId)
+                .promocjaId(promocjaId)
                 .dataPrzyznania(LocalDate.now())
+                .wykorzystana(false)
                 .build();
 
-        // Ustawienie referencji - wymaga pobrania pełnych obiektów
-        // W praktyce powinny być wstrzyknięte serwisy KlientService i PromocjaService
         return klientPromocjaRepository.save(klientPromocja);
     }
 

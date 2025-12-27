@@ -3,17 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title th:text="${tytul}">Formularz Serwisu</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .status-info {
-            font-size: 0.9em;
-        }
-        .debug-info {
-            font-size: 0.7em;
-            color: #6c757d;
-        }
+        .status-info { font-size: 0.9em; }
+        .debug-info { font-size: 0.7em; color: #6c757d; }
     </style>
 </head>
 <body>
@@ -43,89 +38,30 @@
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
 
-                    <!-- DEBUG INFO -->
-                    <div th:if="${serwis != null}" class="alert alert-info small">
-                        <strong>Debug:</strong>
-                        ID: <span th:text="${serwis.id}"></span> |
-                        Status: <span th:text="${serwis.status}"></span> |
-                        Koszt: <span th:text="${serwis.koszt}"></span>
-                    </div>
-
-                    <!-- FORMULARZ DLA DODAWANIA -->
-                    <form th:if="${serwis.id == null}" th:action="@{/serwis/dodaj}" method="post">
-                        <div class="mb-3">
-                            <label for="samochod" class="form-label">Samochód *</label>
-                            <select class="form-select" id="samochod" name="samochod" required>
-                                <option value="">Wybierz samochód</option>
-                                <option th:each="s : ${samochody}"
-                                        th:value="${s.id}"
-                                        th:text="${s.marka + ' ' + s.model + ' (' + s.rokProdukcji + ')'}">
-                                </option>
-                            </select>
-                        </div>
+                    <<form th:action="@{/serwis/zapisz}" method="post">
+                    <!-- UKRYTE POLE ID - WAŻNE! -->
+                    <input type="hidden" name="id" th:value="${serwis.id}">
 
                         <div class="mb-3">
-                            <label for="pracownik" class="form-label">Pracownik *</label>
-                            <select class="form-select" id="pracownik" name="pracownik" required>
-                                <option value="">Wybierz pracownika</option>
-                                <option th:each="p : ${pracownicy}"
-                                        th:value="${p.id}"
-                                        th:text="${p.imie + ' ' + p.nazwisko + ' - ' + p.stanowisko}">
-                                </option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="opisUslugi" class="form-label">Opis usługi *</label>
-                            <textarea class="form-control" id="opisUslugi" name="opisUslugi"
-                                      rows="4" required placeholder="Opisz usługę do wykonania..."></textarea>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="koszt" class="form-label">Koszt (zł)</label>
-                                <input type="number" step="0.01" class="form-control" id="koszt"
-                                       name="koszt" min="0" placeholder="0.00">
-                                <div class="form-text">Pozostaw puste aby utworzyć rezerwację</div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="dataSerwisu" class="form-label">Data serwisu *</label>
-                                <input type="date" class="form-control" id="dataSerwisu"
-                                       name="dataSerwisu" required
-                                       th:value="${serwis.dataSerwisu}">
-                            </div>
-                        </div>
-
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="/serwis" class="btn btn-secondary me-md-2">Anuluj</a>
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-plus"></i> Dodaj Serwis
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- FORMULARZ DLA EDYCJI -->
-                    <form th:if="${serwis.id != null}" th:action="@{/serwis/edytuj/{id}(id=${serwis.id})}" method="post">
-                        <div class="mb-3">
-                            <label for="samochod" class="form-label">Samochód *</label>
-                            <select class="form-select" id="samochod" name="samochod" required>
+                            <label for="samochodId" class="form-label">Samochód *</label>
+                            <select class="form-select" id="samochodId" name="samochodId" required>
                                 <option value="">Wybierz samochód</option>
                                 <option th:each="s : ${samochody}"
                                         th:value="${s.id}"
                                         th:text="${s.marka + ' ' + s.model + ' (' + s.rokProdukcji + ')'}"
-                                        th:selected="${serwis.samochod != null && serwis.samochod.id == s.id}">
+                                        th:selected="${serwis.samochodId == s.id}">
                                 </option>
                             </select>
                         </div>
 
                         <div class="mb-3">
-                            <label for="pracownik" class="form-label">Pracownik *</label>
-                            <select class="form-select" id="pracownik" name="pracownik" required>
+                            <label for="pracownikId" class="form-label">Pracownik *</label>
+                            <select class="form-select" id="pracownikId" name="pracownikId" required>
                                 <option value="">Wybierz pracownika</option>
                                 <option th:each="p : ${pracownicy}"
                                         th:value="${p.id}"
                                         th:text="${p.imie + ' ' + p.nazwisko + ' - ' + p.stanowisko}"
-                                        th:selected="${serwis.pracownik != null && serwis.pracownik.id == p.id}">
+                                        th:selected="${serwis.pracownikId == p.id}">
                                 </option>
                             </select>
                         </div>
@@ -133,7 +69,7 @@
                         <div class="mb-3">
                             <label for="opisUslugi" class="form-label">Opis usługi *</label>
                             <textarea class="form-control" id="opisUslugi" name="opisUslugi"
-                                      rows="4" required
+                                      rows="4" required placeholder="Opisz usługę do wykonania..."
                                       th:text="${serwis.opisUslugi}"></textarea>
                         </div>
 
@@ -141,19 +77,13 @@
                             <div class="col-md-6 mb-3">
                                 <label for="koszt" class="form-label">Koszt (zł)</label>
                                 <input type="number" step="0.01" class="form-control" id="koszt"
-                                       name="koszt" min="0"
-                                       th:value="${serwis.koszt}"
-                                       placeholder="0.00">
-                                <div class="form-text">
-                                    <span th:if="${serwis.status == 'ZAREZERWOWANY'}">Wprowadź koszt aby zmienić status na ZAKOŃCZONY</span>
-                                    <span th:if="${serwis.status == 'ZAKOŃCZONY'}">Zmień koszt lub pozostaw aby zachować status ZAKOŃCZONY</span>
-                                </div>
+                                       name="koszt" min="0" placeholder="0.00" th:value="${serwis.koszt}">
+                                <div class="form-text">Pozostaw puste aby utworzyć rezerwację</div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="dataSerwisu" class="form-label">Data serwisu *</label>
                                 <input type="date" class="form-control" id="dataSerwisu"
-                                       name="dataSerwisu" required
-                                       th:value="${serwis.dataSerwisu}">
+                                       name="dataSerwisu" required th:value="${serwis.dataSerwisu}">
                             </div>
                         </div>
 
@@ -173,7 +103,8 @@
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                             <a href="/serwis" class="btn btn-secondary me-md-2">Anuluj</a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Zaktualizuj Serwis
+                                <i class="fas fa-save"></i>
+                                <span th:text="${serwis.id == null} ? 'Dodaj Serwis' : 'Zaktualizuj Serwis'"></span>
                             </button>
                         </div>
                     </form>
@@ -186,13 +117,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // Debug info
-    console.log("=== DEBUG FORMULARZ SERWISU ===");
-    console.log("Serwis ID:", [[${serwis.id}]]);
-    console.log("Status:", [[${serwis.status}]]);
-    console.log("Koszt:", [[${serwis.koszt}]]);
-
-    // Walidacja daty - nie może być z przeszłości
     document.addEventListener('DOMContentLoaded', function() {
         const dataInput = document.getElementById('dataSerwisu');
         if (dataInput) {

@@ -10,15 +10,17 @@ import java.util.List;
 @Repository
 public interface KlientPromocjaRepository extends MongoRepository<KlientPromocja, String> {
 
-    @Query("{'klient.$id': ?0}")
+    @Query("{'klientId': ?0}")
     List<KlientPromocja> findByKlientId(String klientId);
 
-    @Query("{'promocja.$id': ?0}")
+    @Query("{'promocjaId': ?0}")
     List<KlientPromocja> findByPromocjaId(String promocjaId);
 
-    @Query("{'klient.$id': ?0, 'promocja.$id': ?1}")
+    @Query("{'klientId': ?0, 'promocjaId': ?1}")
     KlientPromocja findByKlientIdAndPromocjaId(String klientId, String promocjaId);
 
-    @Query("{'klient.$id': ?0, 'promocja.$id': ?1}")
+    @Query("{'klientId': ?0, 'promocjaId': ?1}")
     boolean existsByKlientIdAndPromocjaId(String klientId, String promocjaId);
+
+    List<KlientPromocja> findByKlientIdAndWykorzystanaFalse(String klientId);
 }

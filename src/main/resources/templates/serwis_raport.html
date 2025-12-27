@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Raport Serwisowy</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -101,11 +101,26 @@
                     <tbody>
                     <tr th:each="s : ${serwisy}">
                         <td th:text="${s.id}"></td>
-                        <td th:text="${s.samochod.marka + ' ' + s.samochod.model}"></td>
-                        <td th:text="${s.pracownik.imie + ' ' + s.pracownik.nazwisko}"></td>
+                        <td>
+                            <span th:if="${samochodyMap != null && samochodyMap.containsKey(s.samochodId)}"
+                                  th:text="${samochodyMap[s.samochodId].marka + ' ' + samochodyMap[s.samochodId].model}">
+                            </span>
+                            <span th:unless="${samochodyMap != null && samochodyMap.containsKey(s.samochodId)}"
+                                  th:text="'ID: ' + ${s.samochodId}" class="text-muted">
+                            </span>
+                        </td>
+                        <td>
+                            <span th:if="${pracownicyMap != null && pracownicyMap.containsKey(s.pracownikId)}"
+                                  th:text="${pracownicyMap[s.pracownikId].imie + ' ' + pracownicyMap[s.pracownikId].nazwisko}">
+                            </span>
+                            <span th:unless="${pracownicyMap != null && pracownicyMap.containsKey(s.pracownikId)}"
+                                  th:text="'ID: ' + ${s.pracownikId}" class="text-muted">
+                            </span>
+                        </td>
                         <td th:text="${s.opisUslugi}"></td>
                         <td class="text-success fw-bold"
-                            th:text="${#numbers.formatDecimal(s.koszt, 0, 2, 'POINT') + ' zł'}"></td>
+                            th:text="${s.koszt != null ? (#numbers.formatDecimal(s.koszt, 0, 2, 'POINT') + ' zł') : 'Brak'}">
+                        </td>
                         <td th:text="${#temporals.format(s.dataSerwisu, 'dd.MM.yyyy')}"></td>
                     </tr>
                     </tbody>

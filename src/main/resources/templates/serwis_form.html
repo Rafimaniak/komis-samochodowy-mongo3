@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Formularz Usługi Serwisowej</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -21,52 +21,55 @@
                     </h4>
                 </div>
                 <div class="card-body">
-                    <form th:action="@{${serwis.id == null} ? '/serwis/dodaj' : '/serwis/edytuj/' + ${serwis.id}}"
-                          th:object="${serwis}" method="post">
+                    <form th:action="@{/serwis/zapisz}" method="post">
+                        <input type="hidden" name="id" th:value="${serwis.id}">
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Samochód *</label>
-                                <select class="form-select" th:field="*{samochod}" required>
-                                    <option value="">Wybierz samochód</option>
-                                    <option th:each="samochod : ${samochody}"
-                                            th:value="${samochod.id}"
-                                            th:text="${samochod.marka + ' ' + samochod.model + ' (ID: ' + samochod.id + ')'}">
-                                    </option>
-                                </select>
-                            </div>
+                        <div class="mb-3">
+                            <label for="samochodId" class="form-label">Samochód *</label>
+                            <select class="form-select" id="samochodId" name="samochodId" required>
+                                <option value="">Wybierz samochód</option>
+                                <option th:each="s : ${samochody}"
+                                        th:value="${s.id}"
+                                        th:text="${s.marka + ' ' + s.model + ' (' + s.rokProdukcji + ')'}"
+                                        th:selected="${serwis.samochodId == s.id}">
+                                </option>
+                            </select>
+                        </div>
 
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Pracownik *</label>
-                                <select class="form-select" th:field="*{pracownik}" required>
-                                    <option value="">Wybierz pracownika</option>
-                                    <option th:each="pracownik : ${pracownicy}"
-                                            th:value="${pracownik.id}"
-                                            th:text="${pracownik.imie + ' ' + pracownik.nazwisko}">
-                                    </option>
-                                </select>
-                            </div>
+                        <div class="mb-3">
+                            <label for="pracownikId" class="form-label">Pracownik *</label>
+                            <select class="form-select" id="pracownikId" name="pracownikId" required>
+                                <option value="">Wybierz pracownika</option>
+                                <option th:each="p : ${pracownicy}"
+                                        th:value="${p.id}"
+                                        th:text="${p.imie + ' ' + p.nazwisko + ' - ' + p.stanowisko}"
+                                        th:selected="${serwis.pracownikId == p.id}">
+                                </option>
+                            </select>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Opis Usługi *</label>
-                            <textarea class="form-control" th:field="*{opisUslugi}"
-                                      rows="4" placeholder="Opisz wykonaną usługę..." required></textarea>
+                            <textarea class="form-control" name="opisUslugi"
+                                      rows="4" placeholder="Opisz wykonaną usługę..." required
+                                      th:text="${serwis.opisUslugi}"></textarea>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Koszt (zł) *</label>
+                                <label class="form-label">Koszt (zł)</label>
                                 <div class="input-group">
                                     <input type="number" step="0.01" class="form-control"
-                                           th:field="*{koszt}" min="0" required>
+                                           name="koszt" min="0" th:value="${serwis.koszt}">
                                     <span class="input-group-text">zł</span>
                                 </div>
+                                <div class="form-text">Pozostaw puste dla rezerwacji</div>
                             </div>
 
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Data Serwisu *</label>
-                                <input type="date" class="form-control" th:field="*{dataSerwisu}" required>
+                                <input type="date" class="form-control" name="dataSerwisu"
+                                       th:value="${serwis.dataSerwisu}" required>
                             </div>
                         </div>
 
@@ -90,7 +93,6 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Ustaw domyślną datę na dzisiaj
         const dateField = document.querySelector('input[type="date"]');
         if (dateField && !dateField.value) {
             const today = new Date().toISOString().split('T')[0];

@@ -21,7 +21,6 @@ import java.util.List;
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class SerwisController {
-
     private final SerwisService serwisService;
     private final SamochodService samochodService;
     private final PracownikService pracownikService;
@@ -29,14 +28,25 @@ public class SerwisController {
     @GetMapping
     public String listSerwisy(Model model) {
         List<Serwis> serwisy = serwisService.findAll();
+        long zarezerwowane = serwisService.countZarezerwowane();
+        long zakonczone = serwisService.countZakonczone();
+        BigDecimal lacznyKoszt = serwisService.getTotalKoszt();
+
+        // DODANE: Mapa samochodów i pracowników do wyświetlania nazw
         model.addAttribute("serwisy", serwisy);
-        model.addAttribute("tytul", "Lista serwisów");
+        model.addAttribute("samochodyMap", serwisService.getSamochodyMap());
+        model.addAttribute("pracownicyMap", serwisService.getPracownicyMap());
+        model.addAttribute("zarezerwowane", zarezerwowane);
+        model.addAttribute("zakonczone", zakonczone);
+        model.addAttribute("lacznyKoszt", lacznyKoszt);
+        model.addAttribute("tytul", "Lista Serwisów");
         return "serwis/lista";
     }
 
-    @GetMapping("/nowy")
+    @GetMapping("/dodaj")
     public String newSerwisForm(Model model) {
         List<Samochod> samochody = samochodService.findAll();
+
         model.addAttribute("serwis", new Serwis());
         model.addAttribute("samochody", samochody);
         model.addAttribute("pracownicy", pracownikService.findAll());
@@ -45,12 +55,31 @@ public class SerwisController {
     }
 
     @PostMapping("/zapisz")
-    public String saveSerwis(@ModelAttribute Serwis serwis, RedirectAttributes redirectAttributes) {
+    public String saveSerwis(@ModelAttribute Serwis serwis,
+                             @RequestParam(required = false) String id,
+                             @RequestParam String samochodId,
+                             @RequestParam String pracownikId,
+                             RedirectAttributes redirectAttributes) {
         try {
+            // USTAW ID TYLKO JEŚLI JEST PODANE (DLA EDYCJI)
+            if (id != null && !id.isEmpty()) {
+                serwis.setId(id);
+            }
+            // ZAWSZE USTAWIAJ SAMOCHOD I PRACOWNIKA
+            serwis.setSamochodId(samochodId);
+            serwis.setPracownikId(pracownikId);
+
+            // UPEWNIJ SIĘ ŻE DATA JEST USTAWIONA
+            if (serwis.getDataSerwisu() == null) {
+                serwis.setDataSerwisu(LocalDate.now());
+            }
+
+            // ZAPISZ - ID ZOSTANIE WYGENEROWANE W SERWISIE JEŚLI POTRZEBNE
             serwisService.save(serwis);
             redirectAttributes.addFlashAttribute("successMessage", "Serwis zapisany pomyślnie");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Błąd: " + e.getMessage());
+            e.printStackTrace(); // DODAJ LOGOWANIE BŁĘDÓW
         }
         return "redirect:/serwis";
     }
@@ -59,6 +88,7 @@ public class SerwisController {
     public String editSerwisForm(@PathVariable String id, Model model) {
         Serwis serwis = serwisService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Serwis nie znaleziony"));
+
         List<Samochod> samochody = samochodService.findAll();
 
         model.addAttribute("serwis", serwis);
@@ -75,105 +105,98 @@ public class SerwisController {
             redirectAttributes.addFlashAttribute("successMessage", "Serwis usunięty pomyślnie");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Błąd: " + e.getMessage());
+            e.printStackTrace();
         }
         return "redirect:/serwis";
     }
 
+    // NOWA METODA: Formularz rezerwacji
     @GetMapping("/rezerwuj")
-    public String reserveServiceForm(Model model) {
-        List<Samochod> samochody = samochodService.findAvailableCars();
+    public String rezerwujSerwisForm(Model model) {
+        List<Samochod> samochody = samochodService.findAll();
         model.addAttribute("samochody", samochody);
         model.addAttribute("pracownicy", pracownikService.findAll());
-        model.addAttribute("tytul", "Zarezerwuj serwis");
-        return "serwis/reserve-form";
+        return "serwis/rezerwacja";
     }
 
+    // NOWA METODA: Obsługa rezerwacji
     @PostMapping("/rezerwuj")
-    public String reserveService(@RequestParam String samochodId,
+    public String rezerwujSerwis(@RequestParam String samochodId,
                                  @RequestParam String pracownikId,
                                  @RequestParam String opisUslugi,
-                                 @RequestParam(required = false) BigDecimal szacowanyKoszt,
                                  @RequestParam LocalDate dataSerwisu,
                                  RedirectAttributes redirectAttributes) {
         try {
             Serwis serwis = new Serwis();
-            serwis.setSamochod(samochodService.findById(samochodId).orElseThrow());
-            serwis.setPracownik(pracownikService.findById(pracownikId).orElseThrow());
+            serwis.setSamochodId(samochodId);
+            serwis.setPracownikId(pracownikId);
             serwis.setOpisUslugi(opisUslugi);
-            serwis.setKoszt(null); // null oznacza zarezerwowany
             serwis.setDataSerwisu(dataSerwisu);
+            // koszt pozostaje null -> status: ZAREZERWOWANY
 
             serwisService.save(serwis);
             redirectAttributes.addFlashAttribute("successMessage", "Serwis zarezerwowany pomyślnie");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Błąd: " + e.getMessage());
+            e.printStackTrace();
         }
         return "redirect:/serwis";
     }
 
+    // NOWA METODA: Formularz zakończenia serwisu
+    @GetMapping("/zakoncz/{id}")
+    public String zakonczSerwisForm(@PathVariable String id, Model model) {
+        Serwis serwis = serwisService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Serwis nie znaleziony"));
+        model.addAttribute("serwis", serwis);
+        return "serwis/zakoncz";
+    }
+
+    // NOWA METODA: Obsługa zakończenia serwisu
     @PostMapping("/zakoncz/{id}")
-    public String completeService(@PathVariable String id,
-                                  @RequestParam BigDecimal rzeczywistyKoszt,
-                                  @RequestParam(required = false) String dodatkoweUwagi,
-                                  RedirectAttributes redirectAttributes) {
+    public String zakonczSerwis(@PathVariable String id,
+                                @RequestParam BigDecimal koszt,
+                                RedirectAttributes redirectAttributes) {
         try {
-            Serwis serwis = serwisService.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Serwis nie znaleziony"));
-
-            serwis.setKoszt(rzeczywistyKoszt);
-            if (dodatkoweUwagi != null && !dodatkoweUwagi.trim().isEmpty()) {
-                serwis.setOpisUslugi(serwis.getOpisUslugi() + "\n" + dodatkoweUwagi);
-            }
-
-            serwisService.save(serwis);
+            serwisService.zakonczSerwis(id, koszt);
             redirectAttributes.addFlashAttribute("successMessage", "Serwis zakończony pomyślnie");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Błąd: " + e.getMessage());
+            e.printStackTrace();
         }
         return "redirect:/serwis";
     }
 
+    // NOWA METODA: Anulowanie serwisu
     @PostMapping("/anuluj/{id}")
-    public String cancelService(@PathVariable String id, RedirectAttributes redirectAttributes) {
+    public String anulujSerwis(@PathVariable String id, RedirectAttributes redirectAttributes) {
         try {
-            serwisService.delete(id);
+            serwisService.anulujSerwis(id);
             redirectAttributes.addFlashAttribute("successMessage", "Serwis anulowany pomyślnie");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Błąd: " + e.getMessage());
+            e.printStackTrace();
         }
         return "redirect:/serwis";
-    }
-
-    @GetMapping("/statystyki")
-    public String statistics(Model model) {
-        long reserved = serwisService.countReservedServices();
-        long completed = serwisService.countCompletedServices();
-        BigDecimal totalCost = serwisService.getTotalServiceCost();
-
-        model.addAttribute("reserved", reserved);
-        model.addAttribute("completed", completed);
-        model.addAttribute("totalCost", totalCost);
-        model.addAttribute("tytul", "Statystyki serwisowe");
-        return "serwis/statystyki";
     }
 
     @GetMapping("/zarezerwowane")
     public String reservedServices(Model model) {
-        List<Serwis> reservedServices = serwisService.findAll().stream()
-                .filter(s -> s.getKoszt() == null)
-                .toList();
+        List<Serwis> reservedServices = serwisService.findZarezerwowane();
         model.addAttribute("serwisy", reservedServices);
+        model.addAttribute("samochodyMap", serwisService.getSamochodyMap());
+        model.addAttribute("pracownicyMap", serwisService.getPracownicyMap());
         model.addAttribute("tytul", "Zarezerwowane serwisy");
-        return "serwis/lista-zarezerwowane";
+        return "serwis/lista";
     }
 
     @GetMapping("/zakonczone")
     public String completedServices(Model model) {
-        List<Serwis> completedServices = serwisService.findAll().stream()
-                .filter(s -> s.getKoszt() != null)
-                .toList();
+        List<Serwis> completedServices = serwisService.findZakonczone();
         model.addAttribute("serwisy", completedServices);
+        model.addAttribute("samochodyMap", serwisService.getSamochodyMap());
+        model.addAttribute("pracownicyMap", serwisService.getPracownicyMap());
         model.addAttribute("tytul", "Zakończone serwisy");
-        return "serwis/lista-zakonczone";
+        return "serwis/lista";
     }
 }

@@ -1,12 +1,13 @@
 package pl.komis.model;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Field;
+
 import java.time.LocalDate;
 
 @Document(collection = "klienci_promocje")
@@ -15,15 +16,17 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class KlientPromocja {
-
     @Id
     private String id;
 
-    @DBRef
-    private Klient klient;
+    @Field("klient_id")
+    private String klientId;
 
-    @DBRef
-    private Promocja promocja;
+    @Field("promocja_id")
+    private String promocjaId;
 
+    @Field("dataPrzyznania")
     private LocalDate dataPrzyznania;
+
+    private Boolean wykorzystana;
 }

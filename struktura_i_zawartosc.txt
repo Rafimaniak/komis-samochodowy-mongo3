@@ -1,1068 +1,172 @@
 Eksport wybranych plik�w
-Wygenerowano: 12/26/2025 02:06:13
+Wygenerowano: 12/27/2025 22:03:12
 
 
+�CIE�KA: C:\Users\Rafimaniaak\ProjektJAVA\komis-samochodowy-mongo\src\main\java\pl\komis\controller\SerwisController.java
+----------------------------------------------------------------------------------------------------------------------------
+package pl.komis.controller;
 
-�CIE�KA: pom.xml
---------------------------------
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-         http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import pl.komis.model.Samochod;
+import pl.komis.model.Serwis;
+import pl.komis.service.SamochodService;
+import pl.komis.service.SerwisService;
+import pl.komis.service.PracownikService;
 
-    <!-- 1. DODAJ PARENT SPRING BOOT -->
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.0</version>
-        <relativePath/> <!-- lookup parent from repository -->
-    </parent>
-
-    <groupId>pl.komis</groupId>
-    <artifactId>komis-samochodowy</artifactId>
-    <version>1.0.0</version>
-    <packaging>jar</packaging>
-
-    <name>komis-samochodowy</name>
-    <description>Projekt komisu samochodowego</description>
-
-    <properties>
-        <java.version>21</java.version>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <!-- Usuni�to spring-boot.version - jest ju� w parent -->
-    </properties>
-
-    <dependencies>
-        <!-- Web -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-
-        <!-- JPA -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
-
-        <!-- PostgreSQL -->
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <!-- Lombok -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- Validation -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
-
-        <!-- Thymeleaf -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-thymeleaf</artifactId>
-        </dependency>
-        <!-- USUNI�TO DUPLIKAT -->
-
-        <!-- Security -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
-
-        <!-- Thymeleaf Extras -->
-        <dependency>
-            <groupId>org.thymeleaf.extras</groupId>
-            <artifactId>thymeleaf-extras-springsecurity6</artifactId>
-        </dependency>
-
-        <!-- Testy -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- DevTools dla hot reload -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-devtools</artifactId>
-            <scope>runtime</scope>
-            <optional>true</optional>
-        </dependency>
-    </dependencies>
-
-    <build>
-        <plugins>
-            <!-- 2. DODAJ SPRING BOOT MAVEN PLUGIN -->
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <excludes>
-                        <exclude>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </exclude>
-                    </excludes>
-                </configuration>
-            </plugin>
-
-            <!-- Maven Compiler Plugin -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <!-- 3. UJEDNOLICONO WERSJ� JAVA -->
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
-                    <compilerArgs>
-                        <arg>-parameters</arg>
-                    </compilerArgs>
-                    <!-- Konfiguracja dla Lombok -->
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-</project>
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\model\Samochod.java
------------------------------------------------------------------------------------------------------------
-package pl.komis.model;
-
-import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-
-@Entity
-@Table(name = "samochody")
-public class Samochod {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    private String marka;
-    private String model;
-    private int rokProdukcji;
-    private int przebieg;
-
-    @Column(name = "pojemnosc_silnika")
-    private Double pojemnoscSilnika;
-
-    @Column(name = "rodzaj_paliwa")
-    private String rodzajPaliwa;
-
-    @Column(name = "skrzynia_biegow")
-    private String skrzyniaBiegow;
-
-    private String kolor;
-    private BigDecimal cena;
-    private String status;
-
-    @Column(name = "data_dodania")
-    private LocalDate dataDodania;
-
-    @Column(name = "zdjecie_url")
-    private String zdjecieUrl;
-
-    // DODAJ TE POLA:
-    @ManyToOne
-    @JoinColumn(name = "zarezerwowany_przez_id")
-    private Klient zarezerwowanyPrzez;
-
-    @Column(name = "data_rezerwacji")
-    private LocalDate dataRezerwacji;
-
-    public Samochod() {}
-
-    // --- Gettery i settery ---
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getMarka() {
-        return marka;
-    }
-
-    public void setMarka(String marka) {
-        this.marka = marka;
-    }
-
-    public String getModel() {
-        return model;
-    }
-
-    public void setModel(String model) {
-        this.model = model;
-    }
-
-    public int getRokProdukcji() {
-        return rokProdukcji;
-    }
-
-    public void setRokProdukcji(int rokProdukcji) {
-        this.rokProdukcji = rokProdukcji;
-    }
-
-    public int getPrzebieg() {
-        return przebieg;
-    }
-
-    public void setPrzebieg(int przebieg) {
-        this.przebieg = przebieg;
-    }
-
-    public Double getPojemnoscSilnika() {
-        return pojemnoscSilnika;
-    }
-
-    public void setPojemnoscSilnika(Double pojemnoscSilnika) {
-        this.pojemnoscSilnika = pojemnoscSilnika;
-    }
-
-    public String getRodzajPaliwa() {
-        return rodzajPaliwa;
-    }
-
-    public void setRodzajPaliwa(String rodzajPaliwa) {
-        this.rodzajPaliwa = rodzajPaliwa;
-    }
-
-    public String getSkrzyniaBiegow() {
-        return skrzyniaBiegow;
-    }
-
-    public void setSkrzyniaBiegow(String skrzyniaBiegow) {
-        this.skrzyniaBiegow = skrzyniaBiegow;
-    }
-
-    public String getKolor() {
-        return kolor;
-    }
-
-    public void setKolor(String kolor) {
-        this.kolor = kolor;
-    }
-
-    public BigDecimal getCena() {
-        return cena;
-    }
-
-    public void setCena(BigDecimal cena) {
-        this.cena = cena;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public LocalDate getDataDodania() {
-        return dataDodania;
-    }
-
-    public void setDataDodania(LocalDate dataDodania) {
-        this.dataDodania = dataDodania;
-    }
-
-    public String getZdjecieUrl() {
-        return zdjecieUrl;
-    }
-
-    public void setZdjecieUrl(String zdjecieUrl) {
-        this.zdjecieUrl = zdjecieUrl;
-    }
-
-    // DODAJ TE GETTERY I SETTERY:
-    public Klient getZarezerwowanyPrzez() {
-        return zarezerwowanyPrzez;
-    }
-
-    public void setZarezerwowanyPrzez(Klient zarezerwowanyPrzez) {
-        this.zarezerwowanyPrzez = zarezerwowanyPrzez;
-    }
-
-    public LocalDate getDataRezerwacji() {
-        return dataRezerwacji;
-    }
-
-    public void setDataRezerwacji(LocalDate dataRezerwacji) {
-        this.dataRezerwacji = dataRezerwacji;
-    }
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\model\Klient.java
----------------------------------------------------------------------------------------------------------
-package pl.komis.model;
-
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import org.hibernate.annotations.DynamicUpdate;
-
-import java.math.BigDecimal;
 import java.util.List;
 
-@Entity
-@Table(name = "klient")
-@DynamicUpdate
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class Klient {
+@Controller
+@RequestMapping("/serwis")
+@RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
+public class SerwisController {
+    private final SerwisService serwisService;
+    private final SamochodService samochodService;
+    private final PracownikService pracownikService;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GetMapping
+    public String listSerwisy(Model model) {
+        List<Serwis> serwisy = serwisService.findAll();
+        long zarezerwowane = serwisService.countZarezerwowane();
+        long zakonczone = serwisService.countZakonczone();
+        BigDecimal lacznyKoszt = serwisService.getTotalKoszt();
 
-    private String imie;
-    private String nazwisko;
-    private String email;
-    private String telefon;
-
-    @OneToMany(mappedBy = "klient", cascade = CascadeType.ALL)
-    private List<Zakup> zakupy;
-
-    @Column(name = "liczba_zakupow")
-    private Integer liczbaZakupow = 0;
-
-    @Column(name = "procent_premii", precision = 5, scale = 2)
-    private BigDecimal procentPremii = BigDecimal.ZERO;
-
-    @Column(name = "saldo_premii", precision = 12, scale = 2)
-    private BigDecimal saldoPremii = BigDecimal.ZERO;
-
-    @Column(name = "total_wydane", precision = 12, scale = 2)
-    private BigDecimal totalWydane = BigDecimal.ZERO;
-
-    // Metoda pomocnicza - czy klient może wykorzystać saldo?
-    public boolean mozeWykorzystacSaldo(BigDecimal kwota) {
-        return saldoPremii != null && saldoPremii.compareTo(kwota) >= 0;
+        model.addAttribute("serwisy", serwisy);
+        model.addAttribute("zarezerwowane", zarezerwowane);
+        model.addAttribute("zakonczone", zakonczone);
+        model.addAttribute("lacznyKoszt", lacznyKoszt);
+        model.addAttribute("tytul", "Lista Serwisów");
+        return "serwis/lista";
     }
 
-    // Metoda pomocnicza - użyj salda
-    public void uzyjSalda(BigDecimal kwota) {
-        if (mozeWykorzystacSaldo(kwota)) {
-            saldoPremii = saldoPremii.subtract(kwota);
+    @GetMapping("/dodaj")
+    public String newSerwisForm(Model model) {
+        List<Samochod> samochody = samochodService.findAll();
+
+        model.addAttribute("serwis", new Serwis());
+        model.addAttribute("samochody", samochody);
+        model.addAttribute("pracownicy", pracownikService.findAll());
+        model.addAttribute("tytul", "Dodaj nowy serwis");
+        return "serwis/form";
+    }
+
+    @PostMapping("/zapisz")
+    public String saveSerwis(@ModelAttribute Serwis serwis,
+                             @RequestParam(required = false) String id,
+                             @RequestParam String samochodId,
+                             @RequestParam String pracownikId,
+                             RedirectAttributes redirectAttributes) {
+        try {
+            if (id != null && !id.isEmpty()) {
+                serwis.setId(id);
+            }
+            serwis.setSamochodId(samochodId);
+            serwis.setPracownikId(pracownikId);
+
+            serwisService.save(serwis);
+            redirectAttributes.addFlashAttribute("successMessage", "Serwis zapisany pomyślnie");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Błąd: " + e.getMessage());
         }
+        return "redirect:/serwis";
     }
-}
 
+    @GetMapping("/edytuj/{id}")
+    public String editSerwisForm(@PathVariable String id, Model model) {
+        Serwis serwis = serwisService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Serwis nie znaleziony"));
 
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\model\User.java
--------------------------------------------------------------------------------------------------------
-package pl.komis.model;
+        List<Samochod> samochody = samochodService.findAll();
 
-import jakarta.persistence.*;
-import lombok.*;
+        model.addAttribute("serwis", serwis);
+        model.addAttribute("samochody", samochody);
+        model.addAttribute("pracownicy", pracownikService.findAll());
+        model.addAttribute("tytul", "Edytuj serwis");
+        return "serwis/form";
+    }
 
-import java.time.LocalDateTime;
-
-@Entity
-@Table(name = "users")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class User {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(unique = true, nullable = false, length = 50)
-    private String username;
-
-    @Column(unique = true, nullable = false, length = 100)
-    private String email;
-
-    @Column(nullable = false, length = 255)
-    private String password;
-
-    @Column(length = 20)
-    private String role;
-
-    @Column(name = "enabled")
-    private Boolean enabled;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "klient_id")
-    private Klient klient;
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\model\Pracownik.java
-------------------------------------------------------------------------------------------------------------
-package pl.komis.model;
-
-
-import jakarta.persistence.*;
-import lombok.*;
-
-
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-
-
-@Entity
-@Table(name = "pracownicy")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class Pracownik {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    private String imie;
-    private String nazwisko;
-    private String stanowisko;
-    private String telefon;
-    private String email;
-    private LocalDate dataZatrudnienia;
-
-
-    @OneToMany(mappedBy = "pracownik")
-    private List<Serwis> serwisy = new ArrayList<>();
-
-    @OneToMany(mappedBy = "pracownik")
-    private List<Zakup> zakupy = new ArrayList<>();
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\model\Zakup.java
---------------------------------------------------------------------------------------------------------
-package pl.komis.model;
-
-import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.annotations.DynamicUpdate;
-
-import java.time.LocalDate;
-import java.math.BigDecimal;
-
-@Entity
-@Table(name = "zakupy")
-@DynamicUpdate
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder(toBuilder = true)  // DODAJ toBuilder = true
-public class Zakup {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_samochodu")
-    private Samochod samochod;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_klienta")
-    private Klient klient;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_pracownika")
-    private Pracownik pracownik;
-
-    private LocalDate dataZakupu;
-
-    @Column(precision = 12, scale = 2)
-    private BigDecimal cenaZakupu; // Cena ostateczna (po ewentualnym wykorzystaniu salda)
-
-    @Column(name = "cena_bazowa", precision = 12, scale = 2)
-    private BigDecimal cenaBazowa; // Cena przed zastosowaniem salda
-
-    @Column(name = "zastosowany_rabat", precision = 5, scale = 2)
-    private BigDecimal zastosowanyRabat = BigDecimal.ZERO; // Procent premii naliczonej
-
-    @Column(name = "naliczona_premia", precision = 12, scale = 2)
-    private BigDecimal naliczonaPremia = BigDecimal.ZERO; // Kwota premii z tego zakupu
-
-    @Column(name = "wykorzystane_saldo", precision = 12, scale = 2)
-    private BigDecimal wykorzystaneSaldo = BigDecimal.ZERO; // Kwota wykorzystanego salda
-
-    // Alternatywnie: użyj @Builder.Default dla pól z domyślnymi wartościami
-    // @Builder.Default
-    // private BigDecimal naliczonaPremia = BigDecimal.ZERO;
-
-    // Metoda pomocnicza do obliczania zaoszczędzonej kwoty
-    public BigDecimal getZaoszczedzonaKwota() {
-        if (cenaBazowa != null && cenaZakupu != null) {
-            return cenaBazowa.subtract(cenaZakupu);
+    @PostMapping("/usun/{id}")
+    public String deleteSerwis(@PathVariable String id, RedirectAttributes redirectAttributes) {
+        try {
+            serwisService.delete(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Serwis usunięty pomyślnie");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Błąd: " + e.getMessage());
         }
-        return BigDecimal.ZERO;
+        return "redirect:/serwis";
     }
 
-    // Metoda pomocnicza - czy wykorzystano saldo?
-    public boolean czyWykorzystanoSaldo() {
-        return wykorzystaneSaldo != null && wykorzystaneSaldo.compareTo(BigDecimal.ZERO) > 0;
-    }
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\model\Serwis.java
----------------------------------------------------------------------------------------------------------
-package pl.komis.model;
-
-import jakarta.persistence.*;
-import lombok.*;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-
-@Entity
-@Table(name = "serwis")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class Serwis {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "id_samochodu")
-    private Samochod samochod;
-
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "id_pracownika")
-    private Pracownik pracownik;
-
-    @Column(columnDefinition = "text")
-    private String opisUslugi;
-
-    @Column(precision = 10, scale = 2)
-    private BigDecimal koszt;
-
-    private LocalDate dataSerwisu;
-
-    // DODANE: Pole obliczalne dla statusu
-    @Transient
-    public String getStatus() {
-        if (koszt == null) {
-            return "ZAREZERWOWANY";
-        } else {
-            return "ZAKOŃCZONY";
-        }
+    @GetMapping("/zarezerwowane")
+    public String reservedServices(Model model) {
+        List<Serwis> reservedServices = serwisService.findZarezerwowane();
+        model.addAttribute("serwisy", reservedServices);
+        model.addAttribute("tytul", "Zarezerwowane serwisy");
+        return "serwis/lista";
     }
 
-    // DODANE: Czy serwis jest zarezerwowany
-    @Transient
-    public boolean isZarezerwowany() {
-        return koszt == null;
-    }
-
-    // DODANE: Czy serwis jest zakończony
-    @Transient
-    public boolean isZakonczony() {
-        return koszt != null;
+    @GetMapping("/zakonczone")
+    public String completedServices(Model model) {
+        List<Serwis> completedServices = serwisService.findZakonczone();
+        model.addAttribute("serwisy", completedServices);
+        model.addAttribute("tytul", "Zakończone serwisy");
+        return "serwis/lista";
     }
 }
 
 
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\model\Promocja.java
------------------------------------------------------------------------------------------------------------
-package pl.komis.model;
-
-import jakarta.persistence.*;
-import lombok.*;
-
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-
-@Entity
-@Table(name = "promocje")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class Promocja {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // ZMIANA: było idPromocji
-
-    @Column(nullable = false)
-    private String nazwa;
-
-    private String rodzaj;
-    private Double wartosc;
-
-    @Column(columnDefinition = "text")
-    private String opis;
-
-    private LocalDate dataRozpoczecia;
-    private LocalDate dataZakonczenia;
-    private Boolean aktywna;
-
-    // TYMCZASOWO ZAKOMENTUJ RELACJĘ
-    // @OneToMany(mappedBy = "promocja", cascade = CascadeType.ALL, orphanRemoval = true)
-    // private List<KlientPromocja> klientPromocje = new ArrayList<>();
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\model\KlientPromocja.java
------------------------------------------------------------------------------------------------------------------
-package pl.komis.model;
-
-import jakarta.persistence.*;
-import lombok.*;
-
-import java.time.LocalDate;
-
-@Entity
-@Table(name = "klienci_promocje")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class KlientPromocja {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    // klient, który otrzymał promocję
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_klienta", nullable = false)
-    private Klient klient;
-
-    // promocja, która została przyznana
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_promocji", nullable = false)
-    private Promocja promocja;
-
-    private LocalDate dataPrzyznania;
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\resources\application.yml
----------------------------------------------------------------------------------------------------
-spring:
-  main:
-    allow-circular-references: true
-    allow-bean-definition-overriding: true
-  datasource:
-    url: jdbc:postgresql://localhost:5432/komis
-    username: postgres
-    password: student
-    driver-class-name: org.postgresql.Driver
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
-
-server:
-  port: 8080
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\repository\SamochodRepository.java
---------------------------------------------------------------------------------------------------------------------------
+�CIE�KA: C:\Users\Rafimaniaak\ProjektJAVA\komis-samochodowy-mongo\src\main\java\pl\komis\repository\SamochodRepository.java
+------------------------------------------------------------------------------------------------------------------------------
 package pl.komis.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.jpa.repository.query.Procedure;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
 import pl.komis.model.Samochod;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
-
-public interface SamochodRepository extends JpaRepository<Samochod, Long> {
-
-    // ==================== PODSTAWOWE METODY WYSZUKIWANIA ====================
-
-    @Query("SELECT s FROM Samochod s WHERE LOWER(s.marka) = LOWER(:marka)")
-    List<Samochod> findByMarkaIgnoreCase(@Param("marka") String marka);
-
-    @Query("SELECT s FROM Samochod s WHERE LOWER(s.model) = LOWER(:model)")
-    List<Samochod> findByModelIgnoreCase(@Param("model") String model);
-
-    @Query("SELECT s FROM Samochod s WHERE s.status = :status")
-    List<Samochod> findByStatus(@Param("status") String status);
-
-    @Query("SELECT s FROM Samochod s WHERE s.cena BETWEEN :minCena AND :maxCena")
-    List<Samochod> findByCenaBetween(@Param("minCena") BigDecimal minCena,
-                                     @Param("maxCena") BigDecimal maxCena);
-
-    // ==================== NOWE EFEKTYWNE METODY ====================
-
-    @Query(value = "SELECT DISTINCT marka FROM samochody ORDER BY marka", nativeQuery = true)
-    List<String> findAllMarkiDistinct();
-
-    @Query("SELECT COUNT(s) FROM Samochod s WHERE s.status = :status")
-    long countByStatus(@Param("status") String status);
-
-    @Query(value = "SELECT * FROM get_car_statistics()", nativeQuery = true)
-    Map<String, Object> getCarStatistics();
-
-    @Query(value = "SELECT * FROM get_popular_brands(:limitCount)", nativeQuery = true)
-    List<Object[]> getPopularBrands(@Param("limitCount") Integer limitCount);
-
-    // ==================== PROCEDURY CRUD ====================
-
-    @Procedure(procedureName = "create_car")
-    Long createCar(
-            @Param("p_marka") String marka,
-            @Param("p_model") String model,
-            @Param("p_rok_produkcji") Integer rokProdukcji,
-            @Param("p_przebieg") Integer przebieg,
-            @Param("p_pojemnosc_silnika") Double pojemnoscSilnika,
-            @Param("p_rodzaj_paliwa") String rodzajPaliwa,
-            @Param("p_skrzynia_biegow") String skrzyniaBiegow,
-            @Param("p_kolor") String kolor,
-            @Param("p_cena") BigDecimal cena,
-            @Param("p_status") String status,
-            @Param("p_zdjecie_url") String zdjecieUrl
-    );
-
-    @Procedure(procedureName = "update_car")
-    void updateCar(
-            @Param("p_id") Long id,
-            @Param("p_marka") String marka,
-            @Param("p_model") String model,
-            @Param("p_rok_produkcji") Integer rokProdukcji,
-            @Param("p_przebieg") Integer przebieg,
-            @Param("p_pojemnosc_silnika") Double pojemnoscSilnika,
-            @Param("p_rodzaj_paliwa") String rodzajPaliwa,
-            @Param("p_skrzynia_biegow") String skrzyniaBiegow,
-            @Param("p_kolor") String kolor,
-            @Param("p_cena") BigDecimal cena,
-            @Param("p_status") String status,
-            @Param("p_zdjecie_url") String zdjecieUrl
-    );
-
-    @Procedure(procedureName = "delete_car")
-    void deleteCar(@Param("p_id") Long id);
-
-    // ==================== ZAAWANSOWANE WYSZUKIWANIE ====================
-
-    @Query(value = "SELECT s.* FROM samochody s " +
-            "WHERE (:p_marka IS NULL OR LOWER(s.marka) = LOWER(:p_marka)) " +
-            "AND (:p_model IS NULL OR LOWER(s.model) = LOWER(:p_model)) " +
-            "AND (:p_min_rok IS NULL OR s.rok_produkcji >= :p_min_rok) " +
-            "AND (:p_max_rok IS NULL OR s.rok_produkcji <= :p_max_rok) " +
-            "AND (:p_min_przebieg IS NULL OR s.przebieg >= :p_min_przebieg) " +
-            "AND (:p_max_przebieg IS NULL OR s.przebieg <= :p_max_przebieg) " +
-            "AND (:p_min_cena IS NULL OR s.cena >= :p_min_cena) " +
-            "AND (:p_max_cena IS NULL OR s.cena <= :p_max_cena) " +
-            "AND (:p_rodzaj_paliwa IS NULL OR s.rodzaj_paliwa = :p_rodzaj_paliwa) " +
-            "AND (:p_status IS NULL OR s.status = :p_status)", nativeQuery = true)
-    List<Samochod> searchCars(
-            @Param("p_marka") String marka,
-            @Param("p_model") String model,
-            @Param("p_min_rok") Integer minRok,
-            @Param("p_max_rok") Integer maxRok,
-            @Param("p_min_przebieg") Integer minPrzebieg,
-            @Param("p_max_przebieg") Integer maxPrzebieg,
-            @Param("p_min_cena") BigDecimal minCena,
-            @Param("p_max_cena") BigDecimal maxCena,
-            @Param("p_rodzaj_paliwa") String rodzajPaliwa,
-            @Param("p_status") String status
-    );
-
-    // ==================== PROSTE WYSZUKIWANIE ====================
-
-    @Query(value = "SELECT s.* FROM samochody s " +
-            "WHERE (:p_marka IS NULL OR LOWER(s.marka) = LOWER(:p_marka)) " +
-            "AND (:p_model IS NULL OR LOWER(s.model) = LOWER(:p_model)) " +
-            "AND (:p_status IS NULL OR s.status = :p_status)", nativeQuery = true)
-    List<Samochod> searchCarsSimple(
-            @Param("p_marka") String marka,
-            @Param("p_model") String model,
-            @Param("p_status") String status
-    );
-
-    // ==================== PROCEDURY OPERACJI BIZNESOWYCH ====================
-
-    @Procedure(procedureName = "reserve_car")
-    Map<String, Object> reserveCar(
-            @Param("p_car_id") Long carId,
-            @Param("p_user_id") Long userId
-    );
-
-    @Procedure(procedureName = "sell_car")
-    Map<String, Object> sellCar(
-            @Param("p_car_id") Long carId,
-            @Param("p_user_id") Long userId,
-            @Param("p_employee_id") Long employeeId,
-            @Param("p_final_price") BigDecimal finalPrice
-    );
-
-    @Procedure(procedureName = "cancel_reservation")
-    Map<String, Object> cancelReservation(@Param("p_car_id") Long carId);
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\repository\KlientRepository.java
-------------------------------------------------------------------------------------------------------------------------
-package pl.komis.repository;
-
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import pl.komis.model.Klient;
-
-import java.math.BigDecimal;
-import java.util.Optional;
-
-public interface KlientRepository extends JpaRepository<Klient, Long> {
-
-    Optional<Klient> findByEmail(String email);
-
-    // ZMIANA: aktualny_rabat → procent_premii
-    @Query(value = "SELECT k.procent_premii FROM klient k WHERE k.id = :klientId", nativeQuery = true)
-    Optional<BigDecimal> findProcentPremiiById(@Param("klientId") Long klientId);
-
-    // Nowa metoda: pobierz saldo premii
-    @Query(value = "SELECT k.saldo_premii FROM klient k WHERE k.id = :klientId", nativeQuery = true)
-    Optional<BigDecimal> findSaldoPremiiById(@Param("klientId") Long klientId);
-
-    @Query(value = "SELECT k.liczba_zakupow FROM klient k WHERE k.id = :klientId", nativeQuery = true)
-    Optional<Integer> findLiczbaZakupowById(@Param("klientId") Long klientId);
-
-    // Usuń starą metodę - funkcja oblicz_rabat już nie istnieje
-    // @Query(value = "SELECT pobierz_rabat_dla_klienta(:klientId)", nativeQuery = true)
-    // BigDecimal getRabatDlaKlientaNative(@Param("klientId") Long klientId);
-
-    @Query("SELECT k FROM Klient k WHERE k.id = :id")
-    Optional<Klient> findByIdWithZakupy(@Param("id") Long id);
-
-    // Nowa metoda: wywołaj funkcję PostgreSQL do obliczenia procentu premii
-    @Query(value = "SELECT oblicz_procent_premii(:liczbaZakupow)", nativeQuery = true)
-    BigDecimal obliczProcentPremiiNative(@Param("liczbaZakupow") Long liczbaZakupow);
-    @Query("SELECT COALESCE(SUM(z.naliczonaPremia), 0) FROM Zakup z WHERE z.klient.id = :klientId")
-    BigDecimal sumNaliczonaPremiaByKlientId(@Param("klientId") Long klientId);
-
-    @Query("SELECT COALESCE(SUM(z.wykorzystaneSaldo), 0) FROM Zakup z WHERE z.klient.id = :klientId")
-    BigDecimal sumWykorzystaneSaldoByKlientId(@Param("klientId") Long klientId);
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\repository\UserRepository.java
-----------------------------------------------------------------------------------------------------------------------
-package pl.komis.repository;
-
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
-import pl.komis.model.User;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface SamochodRepository extends MongoRepository<Samochod, String> {
 
-    Optional<User> findByUsername(String username);
-    Optional<User> findByEmail(String email);
-    boolean existsByUsername(String username);
-    boolean existsByEmail(String email);
+    List<Samochod> findByMarkaIgnoreCase(String marka);
+    List<Samochod> findByModelIgnoreCase(String model);
+    List<Samochod> findByStatus(String status);
+    List<Samochod> findByCenaBetween(BigDecimal minCena, BigDecimal maxCena);
 
-    @Query("SELECT u FROM User u WHERE u.role = :role")
-    List<User> findByRole(@Param("role") String role);
+    @Query(value = "{}", fields = "{'marka' : 1}")
+    List<Samochod> findAllMarkiDistinct();
 
-    @Query("SELECT COUNT(u) FROM User u WHERE u.role = :role")
-    long countByRole(@Param("role") String role);
+    long countByStatus(String status);
 
-    @Query("SELECT u FROM User u WHERE u.enabled = true")
-    List<User> findActiveUsers();
-
-    @Query("SELECT u FROM User u WHERE u.enabled = false")
-    List<User> findInactiveUsers();
-
-    @Query(value = "SELECT * FROM get_user_statistics()", nativeQuery = true)
-    Map<String, Object> getUserStatisticsNative();
-
-    // Dodaj jeśli nie masz:
-    @Modifying
-    @Transactional
-    @Query("UPDATE User u SET u.password = :password WHERE u.id = :id")
-    int updatePassword(@Param("id") Long id, @Param("password") String password);
+    // Proste wyszukiwanie z opcjonalnymi parametrami
+    @Query("{$or: [" +
+            "{'marka': {$regex: ?0, $options: 'i'}}, " +
+            "{'model': {$regex: ?1, $options: 'i'}}, " +
+            "{'status': {$regex: ?2, $options: 'i'}} " +
+            "]}")
+    List<Samochod> searchCarsSimple(String marka, String model, String status);
+    // Zaawansowane wyszukiwanie - użyj Criteria w serwisie zamiast @Query
+    // Metoda searchCars będzie implementowana w serwisie za pomocą Criteria
 }
 
 
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\repository\ZakupRepository.java
------------------------------------------------------------------------------------------------------------------------
-package pl.komis.repository;
-
-import pl.komis.model.Zakup;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.jpa.repository.query.Procedure;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
-
-@Repository
-public interface ZakupRepository extends JpaRepository<Zakup, Long> {
-
-    List<Zakup> findByKlientId(Long klientId);
-    List<Zakup> findByPracownikId(Long pracownikId);
-    List<Zakup> findByDataZakupuBetween(LocalDate startDate, LocalDate endDate);
-    boolean existsBySamochodId(Long samochodId);
-    boolean existsBySamochodIdAndKlientId(Long samochodId, Long klientId);
-
-    // Nowe metody wykorzystujące procedury/funkcje z bazy
-    @Transactional
-    @Procedure(name = "dodaj_zakup")
-    Long dodajZakupZProcedury(
-            @Param("p_nowy_id_zakupu") Long nowyIdZakupu,  // OUT parameter musi być pierwszy
-            @Param("p_id_samochodu") Long samochodId,
-            @Param("p_id_klienta") Long klientId,
-            @Param("p_id_pracownika") Long pracownikId,
-            @Param("p_cena_bazowa") BigDecimal cenaBazowa,
-            @Param("p_wykorzystane_saldo") BigDecimal wykorzystaneSaldo
-    );
-
-    @Transactional
-    @Modifying
-    @Query(value = "CALL usun_zakup(:idZakupu)", nativeQuery = true)
-    void usunZakupZProcedury(@Param("idZakupu") Long idZakupu);
-
-    @Query(value = "SELECT * FROM znajdz_zakupy_klienta(:idKlienta)", nativeQuery = true)
-    List<Object[]> znajdzZakupyKlientaZProcedury(@Param("idKlienta") Long idKlienta);
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\repository\SerwisRepository.java
+�CIE�KA: C:\Users\Rafimaniaak\ProjektJAVA\komis-samochodowy-mongo\src\main\java\pl\komis\service\SamochodService.java
 ------------------------------------------------------------------------------------------------------------------------
-package pl.komis.repository;
-
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.jpa.repository.query.Procedure;
-import org.springframework.data.repository.query.Param;
-import pl.komis.model.Serwis;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
-
-public interface SerwisRepository extends JpaRepository<Serwis, Long> {
-
-    // Podstawowe metody
-    List<Serwis> findByDataSerwisuBetween(LocalDate od, LocalDate do_);
-
-    @Query("SELECT s FROM Serwis s WHERE s.samochod.id = :samochodId")
-    List<Serwis> findBySamochodId(@Param("samochodId") Long samochodId);
-
-    @Query("SELECT s FROM Serwis s WHERE s.pracownik.id = :pracownikId")
-    List<Serwis> findByPracownikId(@Param("pracownikId") Long pracownikId);
-
-    // PROCEDURY - POPRAWIONE TYPY
-    @Procedure(procedureName = "create_service")
-    Long createService(
-            @Param("p_id_samochodu") Long idSamochodu,
-            @Param("p_id_pracownika") Long idPracownika,
-            @Param("p_opis_uslugi") String opisUslugi,
-            @Param("p_koszt") BigDecimal koszt,  // ZMIANA: Double -> BigDecimal
-            @Param("p_data_serwisu") LocalDate dataSerwisu
-    );
-
-    @Procedure(procedureName = "update_service")
-    void updateService(
-            @Param("p_id") Long id,
-            @Param("p_id_samochodu") Long idSamochodu,
-            @Param("p_id_pracownika") Long idPracownika,
-            @Param("p_opis_uslugi") String opisUslugi,
-            @Param("p_koszt") BigDecimal koszt,  // ZMIANA: Double -> BigDecimal
-            @Param("p_data_serwisu") LocalDate dataSerwisu
-    );
-
-    @Procedure(procedureName = "delete_service")
-    void deleteService(@Param("p_id") Long id);
-
-    @Procedure(procedureName = "reserve_service")
-    Long reserveService(
-            @Param("p_id_samochodu") Long idSamochodu,
-            @Param("p_id_pracownika") Long idPracownika,
-            @Param("p_opis_uslugi") String opisUslugi,
-            @Param("p_szacowany_koszt") BigDecimal szacowanyKoszt,  // ZMIANA
-            @Param("p_data_serwisu") LocalDate dataSerwisu
-    );
-
-    @Procedure(procedureName = "complete_service")
-    void completeService(
-            @Param("p_service_id") Long serviceId,
-            @Param("p_zreczynisty_koszt") BigDecimal rzeczywistyKoszt,  // ZMIANA
-            @Param("p_dodatkowe_uwagi") String dodatkoweUwagi
-    );
-
-    @Procedure(procedureName = "cancel_service")
-    void cancelService(@Param("p_service_id") Long serviceId);
-
-    // Statystyki
-    @Query("SELECT COUNT(s) FROM Serwis s WHERE s.koszt IS NULL")
-    long countReservedServices();
-
-    @Query("SELECT COUNT(s) FROM Serwis s WHERE s.koszt IS NOT NULL")
-    long countCompletedServices();
-
-    @Query("SELECT COALESCE(SUM(s.koszt), 0) FROM Serwis s WHERE s.koszt IS NOT NULL")
-    BigDecimal getTotalServiceCost();
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\service\SamochodService.java
---------------------------------------------------------------------------------------------------------------------
 package pl.komis.service;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pl.komis.model.Samochod;
@@ -1070,6 +174,7 @@ import pl.komis.repository.SamochodRepository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -1081,8 +186,7 @@ import java.util.stream.Collectors;
 public class SamochodService {
 
     private final SamochodRepository samochodRepository;
-
-    // ==================== PODSTAWOWE OPERACJE CRUD ====================
+    private final MongoTemplate mongoTemplate;
 
     @Transactional(readOnly = true)
     public List<Samochod> findAll() {
@@ -1090,13 +194,12 @@ public class SamochodService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<Samochod> findById(Long id) {
+    public Optional<Samochod> findById(String id) {
         return samochodRepository.findById(id);
     }
 
     @Transactional
     public Samochod save(Samochod samochod) {
-        // Ustaw domyślne wartości jeżeli potrzebne
         if (samochod.getDataDodania() == null) {
             samochod.setDataDodania(LocalDate.now());
         }
@@ -1116,106 +219,76 @@ public class SamochodService {
         String zdjecieUrl = samochod.getZdjecieUrl();
         if (zdjecieUrl == null) {
             zdjecieUrl = "";
+            samochod.setZdjecieUrl(zdjecieUrl);
         }
 
-        if (samochod.getId() == null) {
-            // Tworzenie nowego samochodu przez procedurę
-            Long newCarId = samochodRepository.createCar(
-                    samochod.getMarka(),
-                    samochod.getModel(),
-                    samochod.getRokProdukcji(),
-                    samochod.getPrzebieg(),
-                    samochod.getPojemnoscSilnika(),
-                    samochod.getRodzajPaliwa(),
-                    samochod.getSkrzyniaBiegow(),
-                    samochod.getKolor(),
-                    samochod.getCena(),
-                    samochod.getStatus(),
-                    zdjecieUrl
-            );
-
-            return samochodRepository.findById(newCarId)
-                    .orElseThrow(() -> new RuntimeException("Błąd podczas tworzenia samochodu"));
-        } else {
-            // ZAPISZ WSZYSTKIE POLA SAMOCHODU
-            // Użyj standardowego save() zamiast procedury, aby zapisać wszystkie pola
-            return samochodRepository.save(samochod);
-        }
+        return samochodRepository.save(samochod);
     }
-
-    @Transactional
-    public void delete(Long id) {
-        if (!samochodRepository.existsById(id)) {
-            throw new RuntimeException("Samochód nie znaleziony");
-        }
-        // Użycie procedury usuwania
-        samochodRepository.deleteCar(id);
-    }
-
-    // ==================== ZAAWANSOWANE WYSZUKIWANIE ====================
 
     @Transactional(readOnly = true)
     public List<Samochod> searchCars(SearchCriteria criteria) {
-        // Upewnij się, że puste stringi są traktowane jako null
-        String marka = (criteria.getMarka() != null && !criteria.getMarka().trim().isEmpty()) ? criteria.getMarka() : null;
-        String model = (criteria.getModel() != null && !criteria.getModel().trim().isEmpty()) ? criteria.getModel() : null;
-        String status = (criteria.getStatus() != null && !criteria.getStatus().trim().isEmpty()) ? criteria.getStatus() : null;
-        String rodzajPaliwa = (criteria.getRodzajPaliwa() != null && !criteria.getRodzajPaliwa().trim().isEmpty()) ? criteria.getRodzajPaliwa() : null;
+        Query query = new Query();
+        List<Criteria> criteriaList = new ArrayList<>();
 
-        return samochodRepository.searchCars(
-                marka,
-                model,
-                criteria.getMinRok(),
-                criteria.getMaxRok(),
-                criteria.getMinPrzebieg(),
-                criteria.getMaxPrzebieg(),
-                criteria.getMinCena(),
-                criteria.getMaxCena(),
-                rodzajPaliwa,
-                status
-        );
+        if (criteria.getMarka() != null && !criteria.getMarka().trim().isEmpty()) {
+            criteriaList.add(Criteria.where("marka").regex(criteria.getMarka(), "i"));
+        }
+
+        if (criteria.getModel() != null && !criteria.getModel().trim().isEmpty()) {
+            criteriaList.add(Criteria.where("model").regex(criteria.getModel(), "i"));
+        }
+
+        if (criteria.getStatus() != null && !criteria.getStatus().trim().isEmpty()) {
+            criteriaList.add(Criteria.where("status").is(criteria.getStatus()));
+        }
+
+        if (criteria.getMinRok() != null) {
+            criteriaList.add(Criteria.where("rokProdukcji").gte(criteria.getMinRok()));
+        }
+
+        if (criteria.getMaxRok() != null) {
+            criteriaList.add(Criteria.where("rokProdukcji").lte(criteria.getMaxRok()));
+        }
+
+        if (criteria.getMinPrzebieg() != null) {
+            criteriaList.add(Criteria.where("przebieg").gte(criteria.getMinPrzebieg()));
+        }
+
+        if (criteria.getMaxPrzebieg() != null) {
+            criteriaList.add(Criteria.where("przebieg").lte(criteria.getMaxPrzebieg()));
+        }
+
+        if (criteria.getMinCena() != null) {
+            criteriaList.add(Criteria.where("cena").gte(criteria.getMinCena()));
+        }
+
+        if (criteria.getMaxCena() != null) {
+            criteriaList.add(Criteria.where("cena").lte(criteria.getMaxCena()));
+        }
+
+        if (criteria.getRodzajPaliwa() != null && !criteria.getRodzajPaliwa().trim().isEmpty()) {
+            criteriaList.add(Criteria.where("rodzajPaliwa").is(criteria.getRodzajPaliwa()));
+        }
+
+        if (!criteriaList.isEmpty()) {
+            query.addCriteria(new Criteria().andOperator(criteriaList.toArray(new Criteria[0])));
+        }
+
+        System.out.println("DEBUG: MongoDB Query: " + query.toString());
+        List<Samochod> results = mongoTemplate.find(query, Samochod.class);
+        System.out.println("DEBUG: Found " + results.size() + " cars");
+
+        return results;
     }
 
     @Transactional(readOnly = true)
     public List<Samochod> searchCarsSimple(String marka, String model, String status) {
-        // Upewnij się, że puste stringi są traktowane jako null
-        String searchMarka = (marka != null && !marka.trim().isEmpty()) ? marka : null;
-        String searchModel = (model != null && !model.trim().isEmpty()) ? model : null;
-        String searchStatus = (status != null && !status.trim().isEmpty()) ? status : null;
+        String searchMarka = (marka != null && !marka.trim().isEmpty()) ? marka : ".*";
+        String searchModel = (model != null && !model.trim().isEmpty()) ? model : ".*";
+        String searchStatus = (status != null && !status.trim().isEmpty()) ? status : ".*";
 
         return samochodRepository.searchCarsSimple(searchMarka, searchModel, searchStatus);
     }
-
-    // ==================== OPERACJE BIZNESOWE ====================
-
-    @Transactional
-    public Map<String, Object> reserveCar(Long carId, Long userId) {
-        try {
-            return samochodRepository.reserveCar(carId, userId);
-        } catch (Exception e) {
-            throw new RuntimeException("Błąd podczas rezerwacji samochodu: " + e.getMessage());
-        }
-    }
-
-    @Transactional
-    public Map<String, Object> sellCar(Long carId, Long userId, Long employeeId, BigDecimal finalPrice) {
-        try {
-            return samochodRepository.sellCar(carId, userId, employeeId, finalPrice);
-        } catch (Exception e) {
-            throw new RuntimeException("Błąd podczas sprzedaży samochodu: " + e.getMessage());
-        }
-    }
-
-    @Transactional
-    public Map<String, Object> cancelReservation(Long carId) {
-        try {
-            return samochodRepository.cancelReservation(carId);
-        } catch (Exception e) {
-            throw new RuntimeException("Błąd podczas anulowania rezerwacji: " + e.getMessage());
-        }
-    }
-
-    // ==================== METODY POMOCNICZE ====================
 
     @Transactional(readOnly = true)
     public List<Samochod> findByMarka(String marka) {
@@ -1263,52 +336,47 @@ public class SamochodService {
     }
 
     @Transactional(readOnly = true)
-    public boolean existsById(Long id) {
+    public boolean existsById(String id) {
         return samochodRepository.existsById(id);
     }
 
     @Transactional
-    public Samochod updateStatus(Long id, String newStatus) {
+    public void delete(String id) {
+        samochodRepository.deleteById(id);
+    }
+
+    @Transactional
+    public Samochod updateStatus(String id, String newStatus) {
         Samochod samochod = samochodRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
-
-        samochodRepository.updateCar(
-                samochod.getId(),
-                samochod.getMarka(),
-                samochod.getModel(),
-                samochod.getRokProdukcji(),
-                samochod.getPrzebieg(),
-                samochod.getPojemnoscSilnika(),
-                samochod.getRodzajPaliwa(),
-                samochod.getSkrzyniaBiegow(),
-                samochod.getKolor(),
-                samochod.getCena(),
-                newStatus,
-                samochod.getZdjecieUrl()
-        );
-
-        return samochodRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Błąd podczas aktualizacji statusu samochodu"));
+        samochod.setStatus(newStatus);
+        return samochodRepository.save(samochod);
     }
 
     @Transactional(readOnly = true)
     public List<String> findAllMarki() {
-        return samochodRepository.findAllMarkiDistinct();
+        List<Samochod> samochody = samochodRepository.findAll();
+        return samochody.stream()
+                .map(Samochod::getMarka)
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
     }
-
-    // ==================== NOWE METODY DLA STATYSTYK ====================
 
     @Transactional(readOnly = true)
     public Map<String, Object> getCarStatistics() {
-        return samochodRepository.getCarStatistics();
-    }
+        long total = count();
+        long available = countByStatus("DOSTEPNY");
+        long sold = countByStatus("SPRZEDANY");
+        long reserved = countByStatus("ZAREZERWOWANY");
 
-    @Transactional(readOnly = true)
-    public List<Object[]> getPopularBrands(Integer limit) {
-        return samochodRepository.getPopularBrands(limit);
+        return Map.of(
+                "total", total,
+                "available", available,
+                "sold", sold,
+                "reserved", reserved
+        );
     }
-
-    // ==================== KLASY POMOCNICZE ====================
 
     @Data
     public static class SearchCriteria {
@@ -1326,2040 +394,471 @@ public class SamochodService {
 }
 
 
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\service\KlientService.java
+�CIE�KA: C:\Users\Rafimaniaak\ProjektJAVA\komis-samochodowy-mongo\src\main\resources\templates\serwis\lista.html
+-------------------------------------------------------------------------------------------------------------------
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${tytul}">Lista Serwisów</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { padding-top: 70px; background-color: #f8f9fa; }
+        .navbar-custom { background-color: #343a40 !important; }
+        .stat-card { padding: 20px; border-radius: 10px; color: white; text-align: center; margin-bottom: 15px; }
+        .table-responsive { border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+<!-- Fixed Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top navbar-custom">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+            <i class="fas fa-car"></i> Komis Samochodowy
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav" sec:authorize="hasRole('ADMIN')">
+                <li class="nav-item"><a class="nav-link" th:href="@{/admin}"><i class="fas fa-tachometer-alt"></i> Panel Admina</a></li>
+                <li class="nav-item"><a class="nav-link" th:href="@{/admin/users}"><i class="fas fa-user-friends"></i> Użytkownicy</a></li>
+                <li class="nav-item"><a class="nav-link" th:href="@{/klienci}"><i class="fas fa-users"></i> Klienci</a></li>
+                <li class="nav-item"><a class="nav-link" th:href="@{/pracownicy}"><i class="fas fa-id-badge"></i> Pracownicy</a></li>
+                <li class="nav-item"><a class="nav-link active" th:href="@{/serwis}"><i class="fas fa-tools"></i> Serwis</a></li>
+                <li class="nav-item"><a class="nav-link" th:href="@{/zakupy}"><i class="fas fa-shopping-cart"></i> Wszystkie zakupy</a></li>
+                <li class="nav-item"><a class="nav-link" th:href="@{/zakupy/rabaty}"><i class="fas fa-gift"></i> Premie</a></li>
+            </ul>
+
+            <ul class="navbar-nav">
+                <li class="nav-item"><a class="nav-link" href="/samochody"><i class="fas fa-car"></i> Samochody</a></li>
+                <li class="nav-item"><a class="nav-link" href="/search"><i class="fas fa-search"></i> Wyszukiwanie</a></li>
+            </ul>
+
+            <ul class="navbar-nav ms-auto" sec:authorize="isAuthenticated()">
+                <li class="nav-item">
+                    <span class="navbar-text me-3">
+                        <i class="fas fa-user"></i> <span sec:authentication="name"></span>
+                    </span>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/logout}">
+                        <i class="fas fa-sign-out-alt"></i> Wyloguj
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-tools me-2"></i> <span th:text="${tytul}">Lista Serwisów</span></h1>
+        <div>
+            <a href="/serwis/dodaj" class="btn btn-success">
+                <i class="fas fa-plus"></i> Dodaj Serwis
+            </a>
+            <a href="/serwis/rezerwuj" class="btn btn-warning ms-2">
+                <i class="fas fa-calendar-plus"></i> Zarezerwuj
+            </a>
+        </div>
+    </div>
+
+    <!-- Statystyki -->
+    <div th:if="${tytul == 'Lista Serwisów'}" class="row mb-4">
+        <div class="col-md-4"><div class="stat-card bg-warning"><i class="fas fa-clock fa-2x mb-2"></i><h3 th:text="${zarezerwowane}">0</h3><p class="mb-0">Zarezerwowane</p></div></div>
+        <div class="col-md-4"><div class="stat-card bg-success"><i class="fas fa-check-circle fa-2x mb-2"></i><h3 th:text="${zakonczone}">0</h3><p class="mb-0">Zakończone</p></div></div>
+        <div class="col-md-4"><div class="stat-card bg-info"><i class="fas fa-money-bill fa-2x mb-2"></i><h3 th:text="${#numbers.formatDecimal(lacznyKoszt, 0, 'COMMA', 2, 'POINT') + ' zł'}">0 zł</h3><p class="mb-0">Łączny koszt</p></div></div>
+    </div>
+
+    <!-- Komunikaty -->
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle"></i><span th:text="${successMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle"></i><span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Filtry -->
+    <div class="card mb-4">
+        <div class="card-header bg-light"><h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtry</h5></div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 mb-2"><a href="/serwis" class="btn btn-outline-primary w-100">Wszystkie</a></div>
+                <div class="col-md-3 mb-2"><a href="/serwis/zarezerwowane" class="btn btn-outline-warning w-100">Zarezerwowane</a></div>
+                <div class="col-md-3 mb-2"><a href="/serwis/zakonczone" class="btn btn-outline-success w-100">Zakończone</a></div>
+                <div class="col-md-3 mb-2"><a href="/samochody" class="btn btn-outline-secondary w-100">Samochody</a></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela serwisów -->
+    <div class="card">
+        <div class="card-header"><h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista serwisów</h5></div>
+        <div class="card-body">
+            <div th:if="${serwisy.empty}" class="alert alert-info text-center">
+                <i class="fas fa-info-circle"></i> Brak serwisów w systemie.
+            </div>
+
+            <div th:if="${!serwisy.empty}" class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                    <tr>
+                        <th>ID</th><th>Data</th><th>Samochód</th><th>Pracownik</th><th>Opis</th><th>Koszt</th><th>Status</th><th>Akcje</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="serwis : ${serwisy}">
+                        <td th:text="${serwis.id}"></td>
+                        <td th:text="${serwis.dataSerwisu}"></td>
+                        <td>
+                            <span th:if="${samochodyMap != null && samochodyMap.containsKey(serwis.samochodId)}"
+                                  th:text="${samochodyMap[serwis.samochodId].marka + ' ' + samochodyMap[serwis.samochodId].model}">
+                            </span>
+                            <span th:unless="${samochodyMap != null && samochodyMap.containsKey(serwis.samochodId)}"
+                                  th:text="'ID: ' + ${serwis.samochodId}" class="text-muted">
+                            </span>
+                        </td>
+                        <td>
+                            <span th:if="${pracownicyMap != null && pracownicyMap.containsKey(serwis.pracownikId)}"
+                                  th:text="${pracownicyMap[serwis.pracownikId].imie + ' ' + pracownicyMap[serwis.pracownikId].nazwisko}">
+                            </span>
+                            <span th:unless="${pracownicyMap != null && pracownicyMap.containsKey(serwis.pracownikId)}"
+                                  th:text="'ID: ' + ${serwis.pracownikId}" class="text-muted">
+                            </span>
+                        </td>
+                        <td><small th:text="${serwis.opisUslugi}"></small></td>
+                        <td>
+                            <span th:if="${serwis.koszt != null}"
+                                  th:text="${#numbers.formatDecimal(serwis.koszt, 0, 'COMMA', 2, 'POINT') + ' zł'}"
+                                  class="fw-bold text-success"></span>
+                            <span th:if="${serwis.koszt == null}" class="text-muted">-</span>
+                        </td>
+                        <td>
+                            <span th:if="${serwis.status == 'ZAREZERWOWANY'}" class="badge bg-warning" th:text="${serwis.status}"></span>
+                            <span th:if="${serwis.status == 'ZAKOŃCZONY'}" class="badge bg-success" th:text="${serwis.status}"></span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a th:href="@{/serwis/edytuj/{id}(id=${serwis.id})}" class="btn btn-outline-primary" title="Edytuj"><i class="fas fa-edit"></i></a>
+                                <th:block th:if="${serwis.status == 'ZAREZERWOWANY'}">
+                                    <a th:href="@{/serwis/zakoncz/{id}(id=${serwis.id})}" class="btn btn-outline-success" title="Zakończ"><i class="fas fa-check"></i></a>
+                                    <form th:action="@{/serwis/anuluj/{id}(id=${serwis.id})}" method="post" style="display: inline;">
+                                        <button type="submit" class="btn btn-outline-danger" title="Anuluj" onclick="return confirm('Czy na pewno chcesz anulować ten serwis?')"><i class="fas fa-times"></i></button>
+                                    </form>
+                                </th:block>
+                                <form th:action="@{/serwis/usun/{id}(id=${serwis.id})}" method="post" style="display: inline;">
+                                    <button type="submit" class="btn btn-outline-danger" title="Usuń" onclick="return confirm('Czy na pewno chcesz usunąć ten serwis?')"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a th:href="@{/admin}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Powrót do panelu
+        </a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+
+�CIE�KA: C:\Users\Rafimaniaak\ProjektJAVA\komis-samochodowy-mongo\src\main\resources\templates\serwis\form.html
 ------------------------------------------------------------------------------------------------------------------
-package pl.komis.service;
-
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import pl.komis.model.Klient;
-import pl.komis.repository.KlientRepository;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
-
-@Service
-@RequiredArgsConstructor
-public class KlientService {
-
-    private final KlientRepository klientRepository;
-
-    public List<Klient> findAll() {
-        return klientRepository.findAll();
-    }
-
-    public Optional<Klient> findById(Long id) {
-        return klientRepository.findById(id);
-    }
-
-    public Optional<Klient> findByEmail(String email) {
-        return klientRepository.findByEmail(email);
-    }
-
-    public Klient save(Klient klient) {
-        return klientRepository.save(klient);
-    }
-
-    public void delete(Long id) {
-        klientRepository.deleteById(id);
-    }
-
-    public Integer getLiczbaZakupow(Long klientId) {
-        return klientRepository.findById(klientId)
-                .map(Klient::getLiczbaZakupow)
-                .orElse(0);
-    }
-
-    public BigDecimal getSaldoPremii(Long klientId) {
-        return klientRepository.findById(klientId)
-                .map(Klient::getSaldoPremii)
-                .orElse(BigDecimal.ZERO);
-    }
-
-    public BigDecimal getProcentPremii(Long klientId) {
-        return klientRepository.findById(klientId)
-                .map(Klient::getProcentPremii)
-                .orElse(BigDecimal.ZERO);
-    }
-
-    public BigDecimal getTotalWydane(Long klientId) {
-        return klientRepository.findById(klientId)
-                .map(Klient::getTotalWydane)
-                .orElse(BigDecimal.ZERO);
-    }
-    public void naprawSaldo(Long klientId) {
-        Klient klient = findById(klientId)
-                .orElseThrow(() -> new RuntimeException("Klient nie znaleziony"));
-
-        // Oblicz poprawną premię na podstawie historii zakupów
-        BigDecimal sumaPremii = klientRepository.sumNaliczonaPremiaByKlientId(klientId);
-        BigDecimal sumaWykorzystanegoSalda = klientRepository.sumWykorzystaneSaldoByKlientId(klientId);
-
-        // Poprawne saldo = suma premii - suma wykorzystanego salda
-        BigDecimal poprawneSaldo = sumaPremii.subtract(sumaWykorzystanegoSalda);
-
-        klient.setSaldoPremii(poprawneSaldo);
-        save(klient);
-    }
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\service\UserService.java
-----------------------------------------------------------------------------------------------------------------
-package pl.komis.service;
-
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import pl.komis.model.Klient;
-import pl.komis.model.User;
-import pl.komis.repository.KlientRepository;
-import pl.komis.repository.UserRepository;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-
-@Service
-@RequiredArgsConstructor
-public class UserService implements UserDetailsService {
-
-    private final UserRepository userRepository;
-    private final KlientRepository klientRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final KlientService klientService;
-
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
-
-        return org.springframework.security.core.userdetails.User
-                .withUsername(user.getUsername())
-                .password(user.getPassword())
-                .roles(user.getRole())
-                .disabled(!user.getEnabled())
-                .build();
-    }
-
-    // ============ CRUD OPERATIONS ============
-
-    @Transactional(readOnly = true)
-    public List<User> findAllUsers() {
-        return userRepository.findAll();
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<User> findById(Long id) {
-        return userRepository.findById(id);
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<User> findByUsername(String username) {
-        return userRepository.findByUsername(username);
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
-    }
-
-    @Transactional
-    public User save(User user) {
-        return userRepository.save(user);
-    }
-
-    @Transactional
-    public User saveUser(User user) {
-        return userRepository.save(user);
-    }
-
-    @Transactional
-    public User updateUser(User user) {
-        if (!userRepository.existsById(user.getId())) {
-            throw new RuntimeException("Użytkownik nie istnieje: " + user.getId());
-        }
-        return userRepository.save(user);
-    }
-
-    @Transactional
-    public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new RuntimeException("Użytkownik nie istnieje: " + id);
-        }
-        userRepository.deleteById(id);
-    }
-
-    // ============ PASSWORD OPERATIONS ============
-
-    @Transactional
-    public void changePassword(Long userId, String newPassword) {
-        User user = findById(userId)
-                .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-        String encodedPassword = passwordEncoder.encode(newPassword);
-        user.setPassword(encodedPassword);
-        userRepository.save(user);
-    }
-
-    @Transactional
-    public boolean verifyPassword(Long userId, String rawPassword) {
-        User user = findById(userId)
-                .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-        return passwordEncoder.matches(rawPassword, user.getPassword());
-    }
-
-    // ============ USER CREATION ============
-
-    @Transactional
-    public User createSimpleUser(String username, String email, String password) {
-        if (usernameExists(username)) {
-            throw new RuntimeException("Użytkownik już istnieje: " + username);
-        }
-
-        User user = User.builder()
-                .username(username)
-                .email(email)
-                .password(passwordEncoder.encode(password))
-                .role("USER")
-                .enabled(true)
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        return userRepository.save(user);
-    }
-
-    @Transactional
-    public User createUserByAdmin(User user, String password, String role) {
-        if (usernameExists(user.getUsername())) {
-            throw new RuntimeException("Użytkownik już istnieje: " + user.getUsername());
-        }
-
-        user.setPassword(passwordEncoder.encode(password));
-        user.setRole(role);
-        user.setEnabled(true);
-        user.setCreatedAt(LocalDateTime.now());
-
-        return userRepository.save(user);
-    }
-
-    // ============ VALIDATION ============
-
-    @Transactional(readOnly = true)
-    public boolean usernameExists(String username) {
-        return userRepository.existsByUsername(username);
-    }
-
-    @Transactional(readOnly = true)
-    public boolean emailExists(String email) {
-        return userRepository.existsByEmail(email);
-    }
-
-    // ============ STATUS MANAGEMENT ============
-
-    @Transactional
-    public void toggleUserStatus(Long id) {
-        User user = findById(id)
-                .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-        user.setEnabled(!user.getEnabled());
-        userRepository.save(user);
-    }
-
-    @Transactional
-    public void activateUser(Long id) {
-        User user = findById(id)
-                .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-        user.setEnabled(true);
-        userRepository.save(user);
-    }
-
-    @Transactional
-    public void deactivateUser(Long id) {
-        User user = findById(id)
-                .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-        user.setEnabled(false);
-        userRepository.save(user);
-    }
-
-    // ============ STATISTICS ============
-
-    @Transactional(readOnly = true)
-    public long count() {
-        return userRepository.count();
-    }
-
-    @Transactional(readOnly = true)
-    public long countByRole(String role) {
-        return userRepository.countByRole(role);
-    }
-
-    @Transactional(readOnly = true)
-    public List<User> findActiveUsers() {
-        return userRepository.findActiveUsers();
-    }
-
-    @Transactional(readOnly = true)
-    public List<User> findInactiveUsers() {
-        return userRepository.findInactiveUsers();
-    }
-
-    // ============ KLIENT RELATIONS ============
-
-    @Transactional
-    public Klient ensureUserHasKlient(Long userId) {
-        User user = findById(userId)
-                .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-        if (user.getKlient() != null) {
-            return user.getKlient();
-        }
-
-        // Utwórz nowego klienta na podstawie danych użytkownika
-        Klient klient = new Klient();
-        klient.setImie(extractFirstName(user.getUsername()));
-        klient.setNazwisko(extractLastName(user.getUsername()));
-        klient.setEmail(user.getEmail());
-        klient.setTelefon("000000000");
-        klient.setLiczbaZakupow(0);
-        klient.setProcentPremii(java.math.BigDecimal.ZERO);
-        klient.setSaldoPremii(java.math.BigDecimal.ZERO);
-        klient.setTotalWydane(java.math.BigDecimal.ZERO);
-
-        Klient savedKlient = klientRepository.save(klient);
-        user.setKlient(savedKlient);
-        userRepository.save(user);
-
-        return savedKlient;
-    }
-
-    private String extractFirstName(String username) {
-        if (username == null || username.isEmpty()) return "Użytkownik";
-        String[] parts = username.split("\\.");
-        if (parts.length > 0) return capitalize(parts[0]);
-        return capitalize(username);
-    }
-
-    private String extractLastName(String username) {
-        if (username == null || username.isEmpty()) return "Klient";
-        String[] parts = username.split("\\.");
-        if (parts.length > 1) return capitalize(parts[1]);
-        return "Klient";
-    }
-
-    private String capitalize(String str) {
-        if (str == null || str.isEmpty()) return str;
-        return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
-    }
-
-    // ============ PASSWORD FIXING ============
-
-    @Transactional
-    public String checkAllUsersPasswords() {
-        StringBuilder result = new StringBuilder();
-        result.append("=== SPRAWDZANIE HASEŁ UŻYTKOWNIKÓW ===<br>");
-
-        List<User> allUsers = findAllUsers();
-        for (User user : allUsers) {
-            String password = user.getPassword();
-            boolean isBCrypt = password.startsWith("$2a$") || password.startsWith("$2b$") || password.startsWith("$2y$");
-
-            result.append("Użytkownik: ").append(user.getUsername())
-                    .append(" | ID: ").append(user.getId())
-                    .append(" | Hasło: ").append(password.substring(0, Math.min(20, password.length()))).append("...")
-                    .append(" | BCrypt: ").append(isBCrypt ? "TAK" : "NIE")
-                    .append("<br>");
-        }
-
-        return result.toString();
-    }
-
-    @Transactional
-    public void fixNonBCryptPasswords() {
-        List<User> allUsers = findAllUsers();
-        int fixedCount = 0;
-
-        for (User user : allUsers) {
-            String password = user.getPassword();
-            boolean isBCrypt = password.startsWith("$2a$") || password.startsWith("$2b$") || password.startsWith("$2y$");
-
-            if (!isBCrypt) {
-                // Zakoduj ponownie hasło jako BCrypt
-                String encodedPassword = passwordEncoder.encode(password);
-                user.setPassword(encodedPassword);
-                userRepository.save(user);
-                fixedCount++;
-
-                System.out.println("Naprawiono hasło dla użytkownika: " + user.getUsername());
-            }
-        }
-
-        System.out.println("Naprawiono " + fixedCount + " haseł");
-    }
-
-    // ============ ROLE MANAGEMENT ============
-
-    @Transactional
-    public void changeUserRole(Long userId, String newRole) {
-        User user = findById(userId)
-                .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-        user.setRole(newRole);
-        userRepository.save(user);
-    }
-
-    @Transactional(readOnly = true)
-    public List<User> findUsersByRole(String role) {
-        return userRepository.findByRole(role);
-    }
-
-    // ============ UTILITY METHODS ============
-
-    @Transactional(readOnly = true)
-    public boolean isAdmin(Long userId) {
-        User user = findById(userId)
-                .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-        return "ADMIN".equals(user.getRole());
-    }
-
-    @Transactional(readOnly = true)
-    public boolean isUser(Long userId) {
-        User user = findById(userId)
-                .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-        return "USER".equals(user.getRole());
-    }
-
-    @Transactional
-    public void updateLastLogin(Long userId) {
-        // Możesz dodać pole lastLogin w encji User jeśli potrzebujesz
-        // User user = findById(userId).orElseThrow(...);
-        // user.setLastLogin(LocalDateTime.now());
-        // userRepository.save(user);
-    }
-
-    // ============ BULK OPERATIONS ============
-
-    @Transactional
-    public void resetAllPasswordsToDefault() {
-        List<User> allUsers = findAllUsers();
-
-        for (User user : allUsers) {
-            String defaultPassword = "default123";
-            String encodedPassword = passwordEncoder.encode(defaultPassword);
-            user.setPassword(encodedPassword);
-            userRepository.save(user);
-        }
-
-        System.out.println("Zresetowano hasła dla " + allUsers.size() + " użytkowników");
-    }
-
-    @Transactional
-    public void disableAllUsers() {
-        List<User> allUsers = findAllUsers();
-
-        for (User user : allUsers) {
-            user.setEnabled(false);
-            userRepository.save(user);
-        }
-
-        System.out.println("Dezaktywowano " + allUsers.size() + " użytkowników");
-    }
-
-    @Transactional
-    public void enableAllUsers() {
-        List<User> allUsers = findAllUsers();
-
-        for (User user : allUsers) {
-            user.setEnabled(true);
-            userRepository.save(user);
-        }
-
-        System.out.println("Aktywowano " + allUsers.size() + " użytkowników");
-    }
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\service\ZakupService.java
------------------------------------------------------------------------------------------------------------------
-package pl.komis.service;
-
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import pl.komis.model.*;
-import pl.komis.repository.*;
-
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.ParameterMode;
-import jakarta.persistence.StoredProcedureQuery;
-import org.springframework.transaction.annotation.Transactional;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
-
-@Service
-@RequiredArgsConstructor
-public class ZakupService {
-
-    private final ZakupRepository zakupRepository;
-    private final KlientRepository klientRepository;
-    private final SamochodService samochodService;
-    private final PracownikService pracownikService;
-    private final UserService userService;
-    private final EntityManager entityManager; // Wstrzyknięcie EntityManager
-
-    @Transactional
-    public Long createZakupZSaldem(Long samochodId, Long userId, Long pracownikId,
-                                   BigDecimal cenaBazowa, BigDecimal wykorzystaneSaldo) {
-
-        // Walidacje pozostają w Javie
-        Samochod samochod = samochodService.findById(samochodId)
-                .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
-
-        User user = userService.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-        Klient klient = user.getKlient();
-        if (klient == null) {
-            throw new RuntimeException("Użytkownik nie ma powiązanego klienta");
-        }
-
-        Pracownik pracownik = pracownikService.findById(pracownikId)
-                .orElseThrow(() -> new RuntimeException("Pracownik nie znaleziony"));
-
-        // Walidacja: wykorzystane saldo nie może przekraczać ceny samochodu
-        if (wykorzystaneSaldo != null && wykorzystaneSaldo.compareTo(cenaBazowa) > 0) {
-            throw new RuntimeException("Wykorzystane saldo nie może przekraczać ceny samochodu");
-        }
-
-        // Walidacja: sprawdź czy klient ma wystarczające saldo
-        BigDecimal faktycznieWykorzystane = (wykorzystaneSaldo != null) ? wykorzystaneSaldo : BigDecimal.ZERO;
-        if (faktycznieWykorzystane.compareTo(BigDecimal.ZERO) > 0) {
-            if (klient.getSaldoPremii() == null ||
-                    klient.getSaldoPremii().compareTo(faktycznieWykorzystane) < 0) {
-                throw new RuntimeException("Niewystarczające saldo premii. Masz: " +
-                        klient.getSaldoPremii() + " zł, a potrzebujesz: " +
-                        faktycznieWykorzystane + " zł");
-            }
-        }
-
-        // UŻYCIE PROCEDURY Z BAZY DANYCH przez EntityManager
-        try {
-            StoredProcedureQuery query = entityManager
-                    .createStoredProcedureQuery("public.dodaj_zakup");
-
-            // Rejestracja parametrów w odpowiedniej kolejności
-            query.registerStoredProcedureParameter(1, Long.class, ParameterMode.OUT); // p_nowy_id_zakupu
-            query.registerStoredProcedureParameter(2, Long.class, ParameterMode.IN);  // p_id_samochodu
-            query.registerStoredProcedureParameter(3, Long.class, ParameterMode.IN);  // p_id_klienta
-            query.registerStoredProcedureParameter(4, Long.class, ParameterMode.IN);  // p_id_pracownika
-            query.registerStoredProcedureParameter(5, BigDecimal.class, ParameterMode.IN); // p_cena_bazowa
-            query.registerStoredProcedureParameter(6, BigDecimal.class, ParameterMode.IN); // p_wykorzystane_saldo
-
-            // Ustawienie parametrów IN
-            query.setParameter(2, samochodId);
-            query.setParameter(3, klient.getId());
-            query.setParameter(4, pracownikId);
-            query.setParameter(5, cenaBazowa);
-            query.setParameter(6, faktycznieWykorzystane);
-
-            // Wykonanie procedury
-            query.execute();
-
-            // Pobranie wartości OUT
-            Long noweIdZakupu = (Long) query.getOutputParameterValue(1);
-
-            // Zmiana statusu samochodu
-            samochod.setStatus("SPRZEDANY");
-            samochod.setZarezerwowanyPrzez(null);
-            samochod.setDataRezerwacji(null);
-            samochodService.save(samochod);
-
-            return noweIdZakupu;
-
-        } catch (Exception e) {
-            throw new RuntimeException("Błąd podczas tworzenia zakupu przez procedurę: " + e.getMessage(), e);
-        }
-    }
-
-    // ==================== METODY ODCZYTU ====================
-
-    public List<Zakup> findAll() {
-        return zakupRepository.findAll();
-    }
-
-    public Optional<Zakup> findById(Long id) {
-        return zakupRepository.findById(id);
-    }
-
-    public Zakup getById(Long id) {
-        return zakupRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Zakup nie znaleziony"));
-    }
-
-    public List<Zakup> findByKlientId(Long id) {
-        return zakupRepository.findByKlientId(id);
-    }
-
-    public List<Zakup> findByPracownikId(Long id) {
-        return zakupRepository.findByPracownikId(id);
-    }
-
-    public List<Zakup> findByDateRange(LocalDate od, LocalDate do_) {
-        return zakupRepository.findByDataZakupuBetween(od, do_);
-    }
-
-    // ==================== METODY ZAPISU ====================
-
-    public Zakup save(Zakup zakup) {
-        return zakupRepository.save(zakup);
-    }
-
-    // ==================== METODY USUWANIA ====================
-
-    @Transactional
-    public void remove(Long id) {
-        try {
-            zakupRepository.deleteById(id); // Standardowe usunięcie (trigger zadziała)
-        } catch (Exception e) {
-            throw new RuntimeException("Błąd podczas usuwania zakupu: " + e.getMessage(), e);
-        }
-    }
-
-    @Transactional
-    public void delete(Long id) {
-        remove(id); // Alias dla remove
-    }
-
-    // ==================== METODY POMOCNICZE ====================
-
-    public BigDecimal pobierzSaldoKlienta(Long klientId) {
-        Klient klient = klientRepository.findById(klientId)
-                .orElseThrow(() -> new RuntimeException("Klient nie znaleziony"));
-        return klient.getSaldoPremii();
-    }
-
-    public boolean czyMozeWykorzystacSaldo(Long klientId, BigDecimal kwota) {
-        if (kwota == null || kwota.compareTo(BigDecimal.ZERO) <= 0) {
-            return false;
-        }
-
-        Klient klient = klientRepository.findById(klientId)
-                .orElseThrow(() -> new RuntimeException("Klient nie znaleziony"));
-
-        return klient.getSaldoPremii() != null &&
-                klient.getSaldoPremii().compareTo(kwota) >= 0;
-    }
-
-    // ==================== METODY STATYSTYCZNE ====================
-
-    public BigDecimal getSumaWydatkowKlienta(Long klientId) {
-        List<Zakup> zakupy = findByKlientId(klientId);
-        return zakupy.stream()
-                .map(Zakup::getCenaZakupu)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    public BigDecimal getSumaWykorzystanegoSaldaKlienta(Long klientId) {
-        List<Zakup> zakupy = findByKlientId(klientId);
-        return zakupy.stream()
-                .map(Zakup::getWykorzystaneSaldo)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    public int getLiczbaZakupowKlienta(Long klientId) {
-        List<Zakup> zakupy = findByKlientId(klientId);
-        return zakupy.size();
-    }
-
-    // ==================== METODY WALIDACYJNE ====================
-
-    public boolean isSamochodKupiony(Long samochodId) {
-        return zakupRepository.existsBySamochodId(samochodId);
-    }
-
-    public boolean isSamochodKupionyPrzezKlienta(Long samochodId, Long klientId) {
-        return zakupRepository.existsBySamochodIdAndKlientId(samochodId, klientId);
-    }
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\controller\SamochodController.java
---------------------------------------------------------------------------------------------------------------------------
-package pl.komis.controller;
-
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import pl.komis.model.*;
-import pl.komis.service.*;
-
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.util.List;
-
-@Controller
-@RequestMapping("/samochody")
-@RequiredArgsConstructor
-public class SamochodController {
-
-    private final SamochodService samochodService;
-    private final UserService userService;
-    private final KlientService klientService;
-    private final PracownikService pracownikService;
-    private final ZakupService zakupService;
-
-    // Widok listy samochodów z wyszukiwarką
-    @GetMapping
-    public String listaSamochodow(
-            @RequestParam(required = false) String marka,
-            @RequestParam(required = false) String model,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) Integer minRok,
-            @RequestParam(required = false) Integer maxRok,
-            @RequestParam(required = false) Integer minPrzebieg,
-            @RequestParam(required = false) Integer maxPrzebieg,
-            @RequestParam(required = false) BigDecimal minCena,
-            @RequestParam(required = false) BigDecimal maxCena,
-            Model modelAttr) {
-
-        List<Samochod> samochody;
-
-        // Sprawdź czy są parametry wyszukiwania (uwzględniając puste stringi)
-        boolean hasSearchParams = (marka != null && !marka.trim().isEmpty()) ||
-                (model != null && !model.trim().isEmpty()) ||
-                (status != null && !status.trim().isEmpty()) ||
-                minRok != null || maxRok != null ||
-                minPrzebieg != null || maxPrzebieg != null ||
-                minCena != null || maxCena != null;
-
-        if (hasSearchParams) {
-            // Użyj zaawansowanego wyszukiwania
-            SamochodService.SearchCriteria criteria = new SamochodService.SearchCriteria();
-            criteria.setMarka(marka);
-            criteria.setModel(model);
-            criteria.setStatus(status);
-            criteria.setMinRok(minRok);
-            criteria.setMaxRok(maxRok);
-            criteria.setMinPrzebieg(minPrzebieg);
-            criteria.setMaxPrzebieg(maxPrzebieg);
-            criteria.setMinCena(minCena);
-            criteria.setMaxCena(maxCena);
-
-            samochody = samochodService.searchCars(criteria);
-
-            // DEBUG: Sprawdź wyniki wyszukiwania
-            System.out.println("DEBUG: Kryteria wyszukiwania: " + criteria);
-            System.out.println("DEBUG: Znaleziono samochodów: " + samochody.size());
-        } else {
-            // Pokaż wszystkie samochody
-            samochody = samochodService.findAll();
-        }
-
-        modelAttr.addAttribute("samochody", samochody);
-        modelAttr.addAttribute("marki", samochodService.findAllMarki());
-        modelAttr.addAttribute("tytul", "Lista Samochodów");
-        modelAttr.addAttribute("hasSearchParams", hasSearchParams);
-
-        // Przekaż parametry wyszukiwania z powrotem do formularza
-        modelAttr.addAttribute("searchMarka", marka);
-        modelAttr.addAttribute("searchModel", model);
-        modelAttr.addAttribute("searchStatus", status);
-        modelAttr.addAttribute("searchMinRok", minRok);
-        modelAttr.addAttribute("searchMaxRok", maxRok);
-        modelAttr.addAttribute("searchMinPrzebieg", minPrzebieg);
-        modelAttr.addAttribute("searchMaxPrzebieg", maxPrzebieg);
-        modelAttr.addAttribute("searchMinCena", minCena);
-        modelAttr.addAttribute("searchMaxCena", maxCena);
-
-        return "samochody/lista";
-    }
-
-    @GetMapping("/szczegoly")
-    public String szczegolySamochodu(@RequestParam("id") Long id, Model model, Authentication authentication) {
-        Samochod samochod = samochodService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
-
-        model.addAttribute("samochod", samochod);
-        model.addAttribute("tytul", samochod.getMarka() + " " + samochod.getModel());
-
-        // DODAJ TĘ CZĘŚĆ: Wyświetlanie ceny z rabatem i saldem
-        if (authentication != null && authentication.isAuthenticated()) {
-            String username = authentication.getName();
-
-            // Znajdź użytkownika
-            userService.findByUsername(username).ifPresent(user -> {
-                if (user.getKlient() != null) {
-                    Klient klient = user.getKlient();
-                    BigDecimal rabat = klient.getProcentPremii();
-                    BigDecimal saldo = klient.getSaldoPremii() != null ? klient.getSaldoPremii() : BigDecimal.ZERO;
-
-                    // PRZEKAŻ DANE DO WIDOKU
-                    model.addAttribute("klientRabat", rabat);
-                    model.addAttribute("klientSaldo", saldo);
-                    model.addAttribute("klient", klient);
-
-                    // Oblicz maksymalną kwotę do wykorzystania
-                    BigDecimal cenaBazowa = samochod.getCena();
-                    BigDecimal maksWykorzystanie = saldo.min(cenaBazowa);
-                    model.addAttribute("maksWykorzystanie", maksWykorzystanie);
-
-                    // Oblicz premię, która zostanie naliczona
-                    if (rabat != null && rabat.compareTo(BigDecimal.ZERO) > 0) {
-                        BigDecimal premiaOdZakupu = cenaBazowa.multiply(rabat)
-                                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                        model.addAttribute("premiaOdZakupu", premiaOdZakupu);
-                    }
-
-                    // Oblicz cenę po rabacie
-                    if (rabat != null && rabat.compareTo(BigDecimal.ZERO) > 0) {
-                        BigDecimal mnoznikRabatu = BigDecimal.ONE
-                                .subtract(rabat.divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
-                        BigDecimal cenaPoRabacie = cenaBazowa.multiply(mnoznikRabatu)
-                                .setScale(2, RoundingMode.HALF_UP);
-
-                        model.addAttribute("cenaPoRabacie", cenaPoRabacie);
-                    }
-
-                    // Sprawdź czy użytkownik jest tym, który zarezerwował
-                    if (samochod.getZarezerwowanyPrzez() != null) {
-                        boolean czyZarezerwowanyPrzezeMnie = klient.getId().equals(samochod.getZarezerwowanyPrzez().getId());
-                        model.addAttribute("czyZarezerwowanyPrzezeMnie", czyZarezerwowanyPrzezeMnie);
-                    } else {
-                        model.addAttribute("czyZarezerwowanyPrzezeMnie", false);
-                    }
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${tytul}">Formularz Serwisu</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .status-info { font-size: 0.9em; }
+        .debug-info { font-size: 0.7em; color: #6c757d; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: main-nav}"></div>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header" th:classappend="${serwis.id == null} ? 'bg-success' : 'bg-primary'">
+                    <h4 class="mb-0 text-white">
+                        <i class="fas" th:classappend="${serwis.id == null} ? 'fa-plus' : 'fa-edit'"></i>
+                        <span th:text="${tytul}">Formularz Serwisu</span>
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Komunikaty -->
+                    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle"></i>
+                        <span th:text="${successMessage}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span th:text="${errorMessage}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <form th:action="@{/serwis/zapisz}" method="post">
+                        <input type="hidden" name="id" th:value="${serwis.id}">
+
+                        <div class="mb-3">
+                            <label for="samochodId" class="form-label">Samochód *</label>
+                            <select class="form-select" id="samochodId" name="samochodId" required>
+                                <option value="">Wybierz samochód</option>
+                                <option th:each="s : ${samochody}"
+                                        th:value="${s.id}"
+                                        th:text="${s.marka + ' ' + s.model + ' (' + s.rokProdukcji + ')'}"
+                                        th:selected="${serwis.samochodId == s.id}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="pracownikId" class="form-label">Pracownik *</label>
+                            <select class="form-select" id="pracownikId" name="pracownikId" required>
+                                <option value="">Wybierz pracownika</option>
+                                <option th:each="p : ${pracownicy}"
+                                        th:value="${p.id}"
+                                        th:text="${p.imie + ' ' + p.nazwisko + ' - ' + p.stanowisko}"
+                                        th:selected="${serwis.pracownikId == p.id}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="opisUslugi" class="form-label">Opis usługi *</label>
+                            <textarea class="form-control" id="opisUslugi" name="opisUslugi"
+                                      rows="4" required placeholder="Opisz usługę do wykonania..."
+                                      th:text="${serwis.opisUslugi}"></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="koszt" class="form-label">Koszt (zł)</label>
+                                <input type="number" step="0.01" class="form-control" id="koszt"
+                                       name="koszt" min="0" placeholder="0.00" th:value="${serwis.koszt}">
+                                <div class="form-text">Pozostaw puste aby utworzyć rezerwację</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="dataSerwisu" class="form-label">Data serwisu *</label>
+                                <input type="date" class="form-control" id="dataSerwisu"
+                                       name="dataSerwisu" required th:value="${serwis.dataSerwisu}">
+                            </div>
+                        </div>
+
+                        <!-- Informacja o statusie -->
+                        <div th:if="${serwis.status == 'ZAREZERWOWANY'}" class="alert alert-warning">
+                            <i class="fas fa-clock"></i>
+                            <strong>Status: ZAREZERWOWANY</strong><br>
+                            Aby zakończyć serwis, wprowadź koszt powyżej.
+                        </div>
+
+                        <div th:if="${serwis.status == 'ZAKOŃCZONY'}" class="alert alert-success">
+                            <i class="fas fa-check-circle"></i>
+                            <strong>Status: ZAKOŃCZONY</strong><br>
+                            Aktualny koszt: <span th:text="${#numbers.formatDecimal(serwis.koszt, 0, 'COMMA', 2, 'POINT') + ' zł'}"></span>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="/serwis" class="btn btn-secondary me-md-2">Anuluj</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                <span th:text="${serwis.id == null} ? 'Dodaj Serwis' : 'Zaktualizuj Serwis'"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dataInput = document.getElementById('dataSerwisu');
+        if (dataInput) {
+            dataInput.addEventListener('change', function() {
+                const selectedDate = new Date(this.value);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                if (selectedDate < today) {
+                    this.classList.add('is-invalid');
+                    alert('Data serwisu nie może być z przeszłości!');
                 } else {
-                    model.addAttribute("klientRabat", BigDecimal.ZERO);
-                    model.addAttribute("klientSaldo", BigDecimal.ZERO);
-                    model.addAttribute("czyZarezerwowanyPrzezeMnie", false);
+                    this.classList.remove('is-invalid');
                 }
             });
-        } else {
-            // Dla niezalogowanych
-            model.addAttribute("klientRabat", BigDecimal.ZERO);
-            model.addAttribute("klientSaldo", BigDecimal.ZERO);
-            model.addAttribute("czyZarezerwowanyPrzezeMnie", false);
         }
+    });
+</script>
+</body>
+</html>
 
-        return "samochody/szczegoly";
-    }
 
-    // Formularz dodawania nowego samochodu - tylko ADMIN
-    @GetMapping("/nowy")
-    @PreAuthorize("hasRole('ADMIN')")
-    public String formNowySamochod(Model model) {
-        model.addAttribute("samochod", new Samochod());
-        model.addAttribute("tytul", "Dodaj Nowy Samochód");
-        return "samochody/form";
-    }
-
-    // Zapisywanie nowego samochodu - tylko ADMIN
-    @PostMapping("/zapisz")
-    @PreAuthorize("hasRole('ADMIN')")
-    public String zapiszSamochod(@ModelAttribute Samochod samochod) {
-        // Ustaw domyślne wartości dla brakujących pól
-        if (samochod.getDataDodania() == null) {
-            samochod.setDataDodania(LocalDate.now());
-        }
-        if (samochod.getRodzajPaliwa() == null) {
-            samochod.setRodzajPaliwa("Benzyna");
-        }
-        if (samochod.getSkrzyniaBiegow() == null) {
-            samochod.setSkrzyniaBiegow("Manualna");
-        }
-        if (samochod.getPojemnoscSilnika() == null) {
-            samochod.setPojemnoscSilnika(2.0);
-        }
-
-        samochodService.save(samochod);
-        return "redirect:/samochody";
-    }
-
-    // Formularz edycji samochodu - tylko ADMIN
-    @GetMapping("/edytuj")
-    @PreAuthorize("hasRole('ADMIN')")
-    public String formEdycjaSamochodu(@RequestParam("id") Long id, Model model) {
-        Samochod samochod = samochodService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
-        model.addAttribute("samochod", samochod);
-        model.addAttribute("tytul", "Edytuj Samochód");
-        return "samochody/form";
-    }
-
-    // Aktualizacja samochodu - tylko ADMIN
-    @PostMapping("/edytuj")
-    @PreAuthorize("hasRole('ADMIN')")
-    public String aktualizujSamochod(@RequestParam("id") Long id, @ModelAttribute Samochod samochod) {
-        samochod.setId(id);
-        samochodService.save(samochod);
-        return "redirect:/samochody";
-    }
-
-    // Usuwanie samochodu - tylko ADMIN
-    @PostMapping("/usun")
-    @PreAuthorize("hasRole('ADMIN')")
-    public String usunSamochod(@RequestParam("id") Long id) {
-        samochodService.delete(id);
-        return "redirect:/samochody";
-    }
-
-    // Rezerwacja samochodu - dla zalogowanych użytkowników
-    // Poprawiona metoda rezerwacji
-    @PostMapping("/zarezerwuj")
-    @PreAuthorize("isAuthenticated()")
-    public String zarezerwujSamochod(@RequestParam("id") Long id,
-                                     Authentication authentication,
-                                     RedirectAttributes redirectAttributes) {
-        try {
-            System.out.println("=== ROZPOCZĘCIE REZERWACJI SAMOCHODU ID: " + id + " ===");
-
-            Samochod samochod = samochodService.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
-
-            System.out.println("Samochód: " + samochod.getMarka() + " " + samochod.getModel());
-            System.out.println("Status przed rezerwacją: " + samochod.getStatus());
-
-            // Pobierz aktualnego użytkownika
-            String username = authentication.getName();
-            User user = userService.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-            System.out.println("Użytkownik: " + user.getUsername());
-            System.out.println("Czy ma klienta: " + (user.getKlient() != null));
-
-            // Upewnij się, że użytkownik ma klienta
-            Klient klient = user.getKlient();
-            if (klient == null) {
-                System.out.println("Brak klienta - tworzę...");
-                klient = userService.ensureUserHasKlient(user.getId());
-            }
-
-            System.out.println("Klient ID: " + klient.getId());
-            System.out.println("Klient: " + klient.getImie() + " " + klient.getNazwisko());
-
-            // Sprawdź czy samochód jest dostępny
-            if (!"DOSTEPNY".equals(samochod.getStatus())) {
-                String errorMsg = "Samochód nie jest dostępny do rezerwacji. Aktualny status: " + samochod.getStatus();
-                System.out.println("BŁĄD: " + errorMsg);
-                redirectAttributes.addFlashAttribute("errorMessage", errorMsg);
-                return "redirect:/samochody/szczegoly?id=" + id;
-            }
-
-            // Zarezerwuj samochód dla tego klienta
-            samochod.setStatus("ZAREZERWOWANY");
-            samochod.setZarezerwowanyPrzez(klient);
-            samochod.setDataRezerwacji(LocalDate.now());
-
-            samochodService.save(samochod);
-
-            System.out.println("Rezerwacja udana! Klient ID: " + klient.getId());
-            System.out.println("Samochód zarezerwowany przez: " + samochod.getZarezerwowanyPrzez().getId());
-            System.out.println("Status po rezerwacji: " + samochod.getStatus());
-
-            redirectAttributes.addFlashAttribute("successMessage",
-                    "Samochód został zarezerwowany pomyślnie! Masz 7 dni na dokonanie zakupu.");
-
-            return "redirect:/samochody/szczegoly?id=" + id;
-
-        } catch (Exception e) {
-            System.err.println("BŁĄD podczas rezerwacji: " + e.getMessage());
-            e.printStackTrace();
-
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Błąd podczas rezerwacji: " + e.getMessage());
-            return "redirect:/samochody/szczegoly?id=" + id;
-        }
-    }
-
-    // Zakup samochodu - dla zalogowanych użytkowników
-    @PostMapping("/kup")
-    @PreAuthorize("isAuthenticated()")
-    public String kupSamochod(
-            @RequestParam("id") Long id,
-            Authentication authentication,
-            RedirectAttributes redirectAttributes) {
-
-        try {
-            System.out.println("=== ROZPOCZĘCIE ZAKUPU SAMOCHODU ID: " + id + " ===");
-
-            // 1. Pobierz samochód
-            Samochod samochod = samochodService.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
-
-            System.out.println("Samochód: " + samochod.getMarka() + " " + samochod.getModel());
-            System.out.println("Status: " + samochod.getStatus());
-
-            // 2. Pobierz użytkownika
-            String username = authentication.getName();
-            User user = userService.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-            System.out.println("Użytkownik: " + user.getUsername());
-
-            // 3. Upewnij się, że użytkownik ma klienta
-            Klient klient = user.getKlient();
-            if (klient == null) {
-                klient = userService.ensureUserHasKlient(user.getId());
-                if (klient == null) {
-                    throw new RuntimeException("Nie można utworzyć klienta dla użytkownika");
-                }
-            }
-
-            System.out.println("Klient ID: " + klient.getId());
-
-            // 4. SPRAWDŹ CZY MOŻNA KUPIĆ TEN SAMOCHÓD
-            if (!"DOSTEPNY".equals(samochod.getStatus()) && !"ZAREZERWOWANY".equals(samochod.getStatus())) {
-                throw new RuntimeException("Samochód nie jest dostępny do sprzedaży. Status: " + samochod.getStatus());
-            }
-
-            // 5. Jeśli zarezerwowany, sprawdź czy to TEN SAM klient
-            if ("ZAREZERWOWANY".equals(samochod.getStatus())) {
-                if (samochod.getZarezerwowanyPrzez() == null) {
-                    System.out.println("UWAGA: Samochód zarezerwowany, ale brak przypisanego klienta");
-                    // Można kontynuować - być może stara rezerwacja bez przypisania
-                } else if (!samochod.getZarezerwowanyPrzez().getId().equals(klient.getId())) {
-                    throw new RuntimeException("Ten samochód jest zarezerwowany przez innego klienta. " +
-                            "Tylko osoba rezerwująca może go kupić.");
-                }
-            }
-
-            // 6. Zaktualizuj status samochodu
-            samochod.setStatus("SPRZEDANY");
-            samochod.setZarezerwowanyPrzez(null); // Wyczyść rezerwację po zakupie
-            samochod.setDataRezerwacji(null);
-            samochodService.save(samochod);
-
-            System.out.println("Status zmieniony na: SPRZEDANY");
-
-            // 7. Znajdź pracownika (pierwszego z listy)
-            Pracownik pracownik = pracownikService.findAll().stream()
-                    .findFirst()
-                    .orElseGet(() -> {
-                        // Jeśli brak pracowników, utwórz domyślnego
-                        Pracownik p = new Pracownik();
-                        p.setImie("Pracownik");
-                        p.setNazwisko("Domyślny");
-                        p.setStanowisko("Sprzedawca");
-                        p.setEmail("pracownik@komis.pl");
-                        p.setTelefon("111-222-333");
-                        p.setDataZatrudnienia(LocalDate.now());
-                        return pracownikService.save(p);
-                    });
-
-            System.out.println("Pracownik: " + pracownik.getImie() + " " + pracownik.getNazwisko());
-
-            // 8. Oblicz cenę z rabatem
-            BigDecimal cenaBazowa = samochod.getCena();
-            BigDecimal rabatProcent = klient.getProcentPremii() != null ?
-                    klient.getProcentPremii() : BigDecimal.ZERO;
-
-            BigDecimal cenaZRabatem = cenaBazowa;
-            if (rabatProcent.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal mnoznikRabatu = BigDecimal.ONE
-                        .subtract(rabatProcent.divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
-                cenaZRabatem = cenaBazowa.multiply(mnoznikRabatu)
-                        .setScale(2, RoundingMode.HALF_UP);
-
-                System.out.println("Zastosowano rabat: " + rabatProcent + "%");
-                System.out.println("Cena po rabacie: " + cenaZRabatem);
-            }
-
-            // 9. Oblicz premię, która zostanie dodana do salda
-            BigDecimal naliczonaPremia = BigDecimal.ZERO;
-            if (rabatProcent.compareTo(BigDecimal.ZERO) > 0) {
-                naliczonaPremia = cenaBazowa.multiply(rabatProcent)
-                        .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                System.out.println("Naliczona premia: " + naliczonaPremia + " zł");
-            }
-
-            // 10. Utwórz zakup
-            Zakup zakup = Zakup.builder()
-                    .samochod(samochod)
-                    .klient(klient)
-                    .pracownik(pracownik)
-                    .dataZakupu(LocalDate.now())
-                    .cenaBazowa(cenaBazowa)
-                    .cenaZakupu(cenaZRabatem)
-                    .zastosowanyRabat(rabatProcent)
-                    .naliczonaPremia(naliczonaPremia)
-                    .wykorzystaneSaldo(BigDecimal.ZERO) // Normalny zakup bez wykorzystania salda
-                    .build();
-
-            Zakup zapisanyZakup = zakupService.save(zakup);
-            System.out.println("Zakup zapisany! ID: " + zapisanyZakup.getId());
-
-            // 11. Aktualizuj dane klienta (liczba zakupów, wydane kwoty)
-            klient.setLiczbaZakupow(klient.getLiczbaZakupow() + 1);
-            klient.setTotalWydane(klient.getTotalWydane().add(cenaZRabatem));
-
-            // Aktualizuj procent premii na podstawie liczby zakupów
-            if (klient.getLiczbaZakupow() >= 5) {
-                klient.setProcentPremii(new BigDecimal("15"));
-            } else if (klient.getLiczbaZakupow() >= 3) {
-                klient.setProcentPremii(new BigDecimal("10"));
-            } else if (klient.getLiczbaZakupow() >= 2) {
-                klient.setProcentPremii(new BigDecimal("5"));
-            } else {
-                klient.setProcentPremii(BigDecimal.ZERO);
-            }
-
-            // Dodaj premię do salda klienta
-            klient.setSaldoPremii(klient.getSaldoPremii().add(naliczonaPremia));
-
-            klientService.save(klient);
-            System.out.println("Zaktualizowano dane klienta");
-            System.out.println("Nowa liczba zakupów: " + klient.getLiczbaZakupow());
-            System.out.println("Nowe saldo: " + klient.getSaldoPremii() + " zł");
-            System.out.println("Nowy procent premii: " + klient.getProcentPremii() + "%");
-
-            // 12. Przygotuj komunikat
-            String message;
-            if (rabatProcent.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal zaoszczedzone = cenaBazowa.subtract(cenaZRabatem);
-                message = String.format(
-                        "Samochód kupiony!<br>" +
-                                "Zastosowano rabat: <strong>%.0f%%</strong><br>" +
-                                "Zaoszczędziłeś: <strong>%.2f zł</strong><br>" +
-                                "Na Twoje saldo dodano: <strong>%.2f zł</strong> premii",
-                        rabatProcent, zaoszczedzone, naliczonaPremia
-                );
-            } else {
-                message = "Samochód kupiony pomyślnie! Zakup zarejestrowany w systemie.";
-            }
-
-            redirectAttributes.addFlashAttribute("successMessage", message);
-            System.out.println("=== ZAKUP ZAKOŃCZONY SUKCESEM ===");
-
-        } catch (Exception e) {
-            System.err.println("BŁĄD podczas zakupu: " + e.getMessage());
-            e.printStackTrace();
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Błąd podczas zakupu: " + e.getMessage());
-        }
-
-        return "redirect:/samochody/szczegoly?id=" + id;
-    }
-
-    // Poprawiona metoda anulowania rezerwacji
-    @PostMapping("/anuluj-rezerwacje")
-    @PreAuthorize("isAuthenticated()")
-    public String anulujRezerwacje(@RequestParam("id") Long id,
-                                   Authentication authentication,
-                                   RedirectAttributes redirectAttributes) {
-        try {
-            System.out.println("=== ANULOWANIE REZERWACJI SAMOCHODU ID: " + id + " ===");
-
-            Samochod samochod = samochodService.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
-
-            System.out.println("Samochód: " + samochod.getMarka() + " " + samochod.getModel());
-            System.out.println("Status: " + samochod.getStatus());
-            System.out.println("Zarezerwowany przez: " +
-                    (samochod.getZarezerwowanyPrzez() != null ?
-                            samochod.getZarezerwowanyPrzez().getId() : "null"));
-
-            // Pobierz aktualnego użytkownika
-            String username = authentication.getName();
-            User user = userService.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-            Klient klient = user.getKlient();
-            if (klient == null) {
-                throw new RuntimeException("Nie masz powiązanego klienta");
-            }
-
-            System.out.println("Klient ID: " + klient.getId());
-
-            // Sprawdź czy samochód jest zarezerwowany i czy to ten klient go zarezerwował
-            if (!"ZAREZERWOWANY".equals(samochod.getStatus())) {
-                String errorMsg = "Samochód nie jest zarezerwowany. Aktualny status: " + samochod.getStatus();
-                System.out.println("BŁĄD: " + errorMsg);
-                redirectAttributes.addFlashAttribute("errorMessage", errorMsg);
-                return "redirect:/samochody/szczegoly?id=" + id;
-            }
-
-            if (samochod.getZarezerwowanyPrzez() == null ||
-                    !samochod.getZarezerwowanyPrzez().getId().equals(klient.getId())) {
-                String errorMsg = "Ten samochód został zarezerwowany przez innego klienta. " +
-                        "Tylko osoba rezerwująca może anulować rezerwację.";
-                System.out.println("BŁĄD: " + errorMsg);
-                System.out.println("Zarezerwowany przez: " +
-                        (samochod.getZarezerwowanyPrzez() != null ?
-                                samochod.getZarezerwowanyPrzez().getId() : "null"));
-                System.out.println("Aktualny klient: " + klient.getId());
-
-                redirectAttributes.addFlashAttribute("errorMessage", errorMsg);
-                return "redirect:/samochody/szczegoly?id=" + id;
-            }
-
-            // Anuluj rezerwację
-            samochod.setStatus("DOSTEPNY");
-            samochod.setZarezerwowanyPrzez(null);
-            samochod.setDataRezerwacji(null);
-
-            samochodService.save(samochod);
-
-            System.out.println("Rezerwacja anulowana pomyślnie!");
-
-            redirectAttributes.addFlashAttribute("successMessage",
-                    "Rezerwacja została anulowana. Samochód jest znów dostępny.");
-
-            return "redirect:/samochody/szczegoly?id=" + id;
-
-        } catch (Exception e) {
-            System.err.println("BŁĄD podczas anulowania rezerwacji: " + e.getMessage());
-            e.printStackTrace();
-
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Błąd podczas anulowania rezerwacji: " + e.getMessage());
-            return "redirect:/samochody/szczegoly?id=" + id;
-        }
-    }
-
-    // Pomocnicze metody do ekstrakcji imienia i nazwiska z username
-    private String extractFirstName(String username) {
-        if (username == null || username.isEmpty()) return "Użytkownik";
-        String[] parts = username.split("\\.");
-        if (parts.length > 0) return capitalize(parts[0]);
-        return capitalize(username);
-    }
-
-    private String extractLastName(String username) {
-        if (username == null || username.isEmpty()) return "Klient";
-        String[] parts = username.split("\\.");
-        if (parts.length > 1) return capitalize(parts[1]);
-        return "Klient";
-    }
-
-    private String capitalize(String str) {
-        if (str == null || str.isEmpty()) return str;
-        return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
-    }
-
-    /**
-     * Oblicza premię, która zostanie naliczona na saldo klienta
-     */
-    private BigDecimal obliczPremie(BigDecimal cena, BigDecimal procentPremii) {
-        if (procentPremii == null || procentPremii.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
-        }
-        return cena.multiply(procentPremii)
-                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-    }
-
-    /**
-     * Oblicza maksymalną kwotę, jaką klient może wykorzystać z salda
-     */
-    private BigDecimal obliczMaksWykorzystanie(BigDecimal saldoKlienta, BigDecimal cenaSamochodu) {
-        if (saldoKlienta == null || saldoKlienta.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
-        }
-        // Można wykorzystać maksymalnie tyle, ile wynosi saldo lub cena samochodu
-        return saldoKlienta.min(cenaSamochodu);
-    }
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\controller\KlientController.java
+�CIE�KA: C:\Users\Rafimaniaak\ProjektJAVA\komis-samochodowy-mongo\src\main\resources\templates\serwis\rezerwacja.html
 ------------------------------------------------------------------------------------------------------------------------
-package pl.komis.controller;
-
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import pl.komis.model.Klient;
-import pl.komis.service.KlientService;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
-
-@Controller
-@RequestMapping("/klienci")
-@RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
-public class KlientController {
-
-    private final KlientService klientService;
-
-    @GetMapping
-    public String listaKlientow(Model model) {
-        // Pobierz wszystkich klientów (encja Klient)
-        List<Klient> klienci = klientService.findAll();
-
-        // Oblicz statystyki
-        BigDecimal totalSaldo = klienci.stream()
-                .map(k -> k.getSaldoPremii() != null ? k.getSaldoPremii() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal totalWydane = klienci.stream()
-                .map(k -> k.getTotalWydane() != null ? k.getTotalWydane() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        long klienciZPremia = klienci.stream()
-                .filter(k -> k.getProcentPremii() != null && k.getProcentPremii().compareTo(BigDecimal.ZERO) > 0)
-                .count();
-
-        model.addAttribute("klienci", klienci);
-        model.addAttribute("totalKlienci", klienci.size());
-        model.addAttribute("totalSaldo", totalSaldo);
-        model.addAttribute("totalWydane", totalWydane);
-        model.addAttribute("klienciZPremia", klienciZPremia);
-        model.addAttribute("tytul", "Lista Klientów");
-        return "klienci";
-    }
-
-    @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public String szczegolyKlienta(@PathVariable Long id, Model model) {
-        try {
-            Optional<Klient> klientOpt = klientService.findById(id);
-
-            if (klientOpt.isEmpty()) {
-                model.addAttribute("errorMessage", "Klient nie znaleziony");
-                model.addAttribute("tytul", "Błąd");
-                return "error";
-            }
-
-            Klient klient = klientOpt.get();
-            model.addAttribute("klient", klient);
-            model.addAttribute("tytul", "Szczegóły klienta: " + klient.getImie() + " " + klient.getNazwisko());
-
-            return "klienci/szczegoly";
-
-        } catch (Exception e) {
-            System.err.println("BŁĄD w szczegolyKlienta: " + e.getMessage());
-            e.printStackTrace();
-            model.addAttribute("errorMessage", "Błąd podczas ładowania klienta: " + e.getMessage());
-            model.addAttribute("tytul", "Błąd");
-            return "error";
-        }
-    }
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\controller\LoginController.java
------------------------------------------------------------------------------------------------------------------------
-package pl.komis.controller;
-
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-
-@Controller
-@RequiredArgsConstructor
-public class LoginController {
-
-    @GetMapping("/login")
-    public String loginPage(@RequestParam(value = "error", required = false) String error,
-                            @RequestParam(value = "logout", required = false) String logout,
-                            Model model) {
-
-        // Obsługa błędów logowania
-        if (error != null) {
-            model.addAttribute("errorMessage", "Nieprawidłowa nazwa użytkownika lub hasło!");
-        }
-
-        // Obsługa wylogowania
-        if (logout != null) {
-            model.addAttribute("successMessage", "Zostałeś pomyślnie wylogowany!");
-        }
-
-        return "login";
-    }
-
-    // NIE DODAWAJ metody POST! Spring Security to obsługuje
-    // Usuń całą metodę @PostMapping("/login")
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\controller\ZakupController.java
------------------------------------------------------------------------------------------------------------------------
-package pl.komis.controller;
-
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import pl.komis.model.*;
-import pl.komis.service.*;
-
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.List;
-
-@Controller
-@RequestMapping("/zakupy")
-@RequiredArgsConstructor
-public class ZakupController {
-
-    private final ZakupService zakupService;
-    private final UserService userService;
-    private final KlientService klientService;
-    private final SamochodService samochodService;
-    private final PracownikService pracownikService;
-
-    @GetMapping("/rabaty")
-    @PreAuthorize("hasRole('ADMIN')")
-    public String listaRabatow(Model model) {
-        List<Klient> klienci = klientService.findAll();
-
-        // Oblicz statystyki
-        BigDecimal totalSaldo = klienci.stream()
-                .map(k -> k.getSaldoPremii() != null ? k.getSaldoPremii() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal totalWydane = klienci.stream()
-                .map(k -> k.getTotalWydane() != null ? k.getTotalWydane() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        long klienciZPremia = klienci.stream()
-                .filter(k -> k.getProcentPremii() != null && k.getProcentPremii().compareTo(BigDecimal.ZERO) > 0)
-                .count();
-
-        model.addAttribute("klienci", klienci);
-        model.addAttribute("totalSaldo", totalSaldo);
-        model.addAttribute("totalWydane", totalWydane);
-        model.addAttribute("klienciZPremia", klienciZPremia);
-        model.addAttribute("tytul", "System premii i rabatów");
-        return "zakupy/rabaty";
-    }
-
-    // Dla admina: pełna lista zakupów
-    @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public String listZakupy(Model model) {
-        List<Zakup> zakupy = zakupService.findAll();
-        System.out.println("DEBUG: Pobrano " + zakupy.size() + " zakupów");
-        model.addAttribute("zakupy", zakupy);
-        model.addAttribute("tytul", "Lista Wszystkich Zakupów");
-        return "zakupy/lista-admin";
-    }
-
-    @GetMapping("/wykorzystaj-saldo")
-    @PreAuthorize("isAuthenticated()")
-    public String wykorzystajSaldoForm(@RequestParam Long samochodId,
-                                       @RequestParam BigDecimal cena,
-                                       Authentication authentication,
-                                       Model model) {
-        String username = authentication.getName();
-
-        User user = userService.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-        if (user.getKlient() == null) {
-            throw new RuntimeException("Nie masz powiązanego klienta");
-        }
-
-        Klient klient = klientService.findById(user.getKlient().getId())
-                .orElseThrow(() -> new RuntimeException("Klient nie znaleziony"));
-
-        // Pobierz samochód
-        Samochod samochod = samochodService.findById(samochodId)
-                .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
-
-        // SPRAWDŹ CZY SAMOCHÓD JEST ZAREZERWOWANY
-        if ("ZAREZERWOWANY".equals(samochod.getStatus())) {
-            if (samochod.getZarezerwowanyPrzez() == null) {
-                throw new RuntimeException("Samochód jest zarezerwowany, ale brak informacji o kliencie");
-            } else if (!samochod.getZarezerwowanyPrzez().getId().equals(klient.getId())) {
-                throw new RuntimeException("Ten samochód jest zarezerwowany przez innego klienta. " +
-                        "Tylko osoba rezerwująca może go kupić.");
-            }
-        }
-
-        // Sprawdź czy samochód jest dostępny
-        if (!"DOSTEPNY".equals(samochod.getStatus()) && !"ZAREZERWOWANY".equals(samochod.getStatus())) {
-            throw new RuntimeException("Samochód nie jest dostępny do zakupu. Status: " + samochod.getStatus());
-        }
-
-        // Reszta metody pozostaje bez zmian...
-        model.addAttribute("samochodId", samochodId);
-        model.addAttribute("cenaBazowa", cena);
-        model.addAttribute("klient", klient);
-        model.addAttribute("saldoKlienta", klient.getSaldoPremii());
-        model.addAttribute("maksWykorzystanie", cena.min(klient.getSaldoPremii()));
-
-        // Dodaj informację o samochodzie do modelu
-        model.addAttribute("samochod", samochod);
-
-        // Dodaj info o premii
-        model.addAttribute("procentPremii", klient.getProcentPremii());
-        if (klient.getProcentPremii().compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal premia = cena.multiply(klient.getProcentPremii())
-                    .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-            model.addAttribute("premiaOdZakupu", premia);
-        }
-
-        // Dodaj listę pracowników
-        List<Pracownik> pracownicy = pracownikService.findAll();
-        model.addAttribute("pracownicy", pracownicy);
-
-        return "zakupy/wykorzystaj-saldo";
-    }
-
-    // POST-wykonanie zakupu z saldem - UŻYWAMY TERAZ PROCEDURY Z BAZY
-    @PostMapping("/wykorzystaj-saldo")
-    @PreAuthorize("isAuthenticated()")
-    public String wykonajZakupZSaldem(@RequestParam Long samochodId,
-                                      @RequestParam BigDecimal cenaBazowa,
-                                      @RequestParam(required = false) BigDecimal wykorzystaneSaldo,
-                                      @RequestParam Long pracownikId,
-                                      Authentication authentication,
-                                      RedirectAttributes redirectAttributes) {
-
-        try {
-            String username = authentication.getName();
-            User user = userService.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-            Klient klient = user.getKlient();
-            if (klient == null) {
-                throw new RuntimeException("Nie masz powiązanego klienta");
-            }
-
-            // Pobierz samochód
-            Samochod samochod = samochodService.findById(samochodId)
-                    .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
-
-            // Sprawdź dostępność samochodu
-            if (!samochod.getStatus().equals("DOSTEPNY") &&
-                    !samochod.getStatus().equals("ZAREZERWOWANY")) {
-                throw new RuntimeException("Samochód nie jest dostępny do zakupu. Status: " + samochod.getStatus());
-            }
-
-            // Jeśli klient zarezerwował ten samochód, to tylko on może go kupić
-            if (samochod.getStatus().equals("ZAREZERWOWANY") &&
-                    (samochod.getZarezerwowanyPrzez() == null ||
-                            !samochod.getZarezerwowanyPrzez().getId().equals(klient.getId()))) {
-                throw new RuntimeException("Ten samochód jest zarezerwowany przez innego klienta. " +
-                        "Tylko osoba rezerwująca może go kupić.");
-            }
-
-            // Pobierz pracownika
-            Pracownik pracownik = pracownikService.findById(pracownikId)
-                    .orElseThrow(() -> new RuntimeException("Pracownik nie znaleziony"));
-
-            // Obsłuż wykorzystanie salda (jeśli podano)
-            BigDecimal faktycznieWykorzystaneSaldo = BigDecimal.ZERO;
-            if (wykorzystaneSaldo != null && wykorzystaneSaldo.compareTo(BigDecimal.ZERO) > 0) {
-                // Sprawdź czy klient ma wystarczające saldo
-                if (klient.getSaldoPremii().compareTo(wykorzystaneSaldo) < 0) {
-                    throw new RuntimeException("Niewystarczające saldo premii");
-                }
-                faktycznieWykorzystaneSaldo = wykorzystaneSaldo.min(cenaBazowa);
-            }
-
-            // UŻYCIE PROCEDURY Z BAZY DANYCH zamiast ręcznego tworzenia Zakupu
-            Long zakupId = zakupService.createZakupZSaldem(
-                    samochodId,
-                    user.getId(),
-                    pracownikId,
-                    cenaBazowa,
-                    faktycznieWykorzystaneSaldo
-            );
-
-            // Pobierz zaktualizowane dane klienta po akcji triggera
-            Klient zaktualizowanyKlient = klientService.findById(klient.getId())
-                    .orElseThrow(() -> new RuntimeException("Klient nie znaleziony po zakupie"));
-
-            // Przygotuj komunikat sukcesu z aktualnymi danymi
-            String message;
-            if (faktycznieWykorzystaneSaldo.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal zaoszczedzone = faktycznieWykorzystaneSaldo;
-                message = String.format(
-                        "Samochód kupiony z wykorzystaniem salda!<br>" +
-                                "Wykorzystano saldo: <strong>%.2f zł</strong><br>" +
-                                "Nowe saldo: <strong>%.2f zł</strong>",
-                        zaoszczedzone, zaktualizowanyKlient.getSaldoPremii()
-                );
-            } else {
-                message = String.format(
-                        "Samochód kupiony pomyślnie!<br>" +
-                                "Twoje nowe saldo premii: <strong>%.2f zł</strong>",
-                        zaktualizowanyKlient.getSaldoPremii()
-                );
-            }
-
-            redirectAttributes.addFlashAttribute("successMessage", message);
-
-            return "redirect:/zakupy/moje";
-
-        } catch (Exception e) {
-            System.err.println("Błąd podczas zakupu z wykorzystaniem salda: " + e.getMessage());
-            e.printStackTrace();
-
-            // Przekieruj z błędem
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Błąd podczas zakupu: " + e.getMessage());
-            return "redirect:/samochody/szczegoly?id=" + samochodId;
-        }
-    }
-
-    // Dla użytkownika: tylko jego zakupy
-    @GetMapping("/moje")
-    @PreAuthorize("isAuthenticated()")
-    public String mojeZakupy(Authentication authentication, Model model) {
-        String username = authentication.getName();
-
-        try {
-            User user = userService.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-            List<Zakup> zakupy = List.of();
-            Klient klient = null;
-
-            // Użyj metody ensureUserHasKlient zamiast ręcznego tworzenia
-            klient = userService.ensureUserHasKlient(user.getId());
-
-            // Pobierz zakupy klienta
-            Long klientId = klient.getId();
-            zakupy = zakupService.findByKlientId(klientId);
-
-            // OBLICZ SUMY DLA STATYSTYK
-            BigDecimal sumaCenaBazowa = zakupy.stream()
-                    .map(z -> z.getCenaBazowa() != null ? z.getCenaBazowa() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            BigDecimal sumaWykorzystaneSaldo = zakupy.stream()
-                    .map(z -> z.getWykorzystaneSaldo() != null ? z.getWykorzystaneSaldo() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            BigDecimal sumaNaliczonaPremia = zakupy.stream()
-                    .map(z -> z.getNaliczonaPremia() != null ? z.getNaliczonaPremia() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            BigDecimal sumaCenaZakupu = zakupy.stream()
-                    .map(z -> z.getCenaZakupu() != null ? z.getCenaZakupu() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            // Dodaj do modelu
-            model.addAttribute("sumaCenaBazowa", sumaCenaBazowa);
-            model.addAttribute("sumaWykorzystaneSaldo", sumaWykorzystaneSaldo);
-            model.addAttribute("sumaNaliczonaPremia", sumaNaliczonaPremia);
-            model.addAttribute("sumaCenaZakupu", sumaCenaZakupu);
-
-            System.out.println("DEBUG: Klient ID: " + klientId);
-            System.out.println("DEBUG: Procent premii: " + klient.getProcentPremii() + "%");
-            System.out.println("DEBUG: Saldo premii: " + klient.getSaldoPremii() + " zł");
-            System.out.println("DEBUG: Łącznie wydano: " + klient.getTotalWydane() + " zł");
-            System.out.println("DEBUG: Liczba zakupów: " + klient.getLiczbaZakupow());
-
-            model.addAttribute("zakupy", zakupy);
-            model.addAttribute("klient", klient);
-            model.addAttribute("tytul", "Moje Zakupy");
-            model.addAttribute("username", username);
-            return "zakupy/lista-klient";
-
-        } catch (Exception e) {
-            System.err.println("BŁĄD w mojeZakupy: " + e.getMessage());
-            e.printStackTrace();
-            model.addAttribute("errorMessage", "Błąd podczas ładowania zakupów: " + e.getMessage());
-            return "error";
-        }
-    }
-
-    // GET - szczegóły zakupów klienta (dla admina)
-    @GetMapping("/moje/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public String zakupyKlienta(@PathVariable Long id, Model model) {
-        try {
-            // Znajdź klienta
-            Klient klient = klientService.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Klient nie znaleziony"));
-
-            // Pobierz zakupy klienta
-            List<Zakup> zakupy = zakupService.findByKlientId(id);
-
-            // Oblicz statystyki
-            BigDecimal sumaCenaBazowa = zakupy.stream()
-                    .map(z -> z.getCenaBazowa() != null ? z.getCenaBazowa() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            BigDecimal sumaWykorzystaneSaldo = zakupy.stream()
-                    .map(z -> z.getWykorzystaneSaldo() != null ? z.getWykorzystaneSaldo() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            BigDecimal sumaNaliczonaPremia = zakupy.stream()
-                    .map(z -> z.getNaliczonaPremia() != null ? z.getNaliczonaPremia() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            BigDecimal sumaCenaZakupu = zakupy.stream()
-                    .map(z -> z.getCenaZakupu() != null ? z.getCenaZakupu() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            // Dodaj do modelu
-            model.addAttribute("zakupy", zakupy);
-            model.addAttribute("klient", klient);
-            model.addAttribute("sumaCenaBazowa", sumaCenaBazowa);
-            model.addAttribute("sumaWykorzystaneSaldo", sumaWykorzystaneSaldo);
-            model.addAttribute("sumaNaliczonaPremia", sumaNaliczonaPremia);
-            model.addAttribute("sumaCenaZakupu", sumaCenaZakupu);
-            model.addAttribute("tytul", "Zakupy klienta: " + klient.getImie() + " " + klient.getNazwisko());
-
-            return "zakupy/lista-klient";
-
-        } catch (Exception e) {
-            System.err.println("BŁĄD w zakupyKlienta: " + e.getMessage());
-            e.printStackTrace();
-            model.addAttribute("errorMessage", "Błąd podczas ładowania zakupów: " + e.getMessage());
-            return "error";
-        }
-    }
-
-    // GET - szczegóły konkretnego zakupu (dla admina)
-    @GetMapping("/szczegoly/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public String szczegolyZakupu(@PathVariable Long id, Model model) {
-        try {
-            Zakup zakup = zakupService.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Zakup nie znaleziony"));
-
-            model.addAttribute("zakup", zakup);
-            model.addAttribute("tytul", "Szczegóły zakupu #" + zakup.getId());
-
-            return "zakupy/szczegoly";
-        } catch (Exception e) {
-            System.err.println("BŁĄD w szczegolyZakupu: " + e.getMessage());
-            e.printStackTrace();
-            model.addAttribute("errorMessage", "Błąd podczas ładowania zakupu: " + e.getMessage());
-            return "error";
-        }
-
-    }
-
-    // Pomocnicza metoda do znajdowania zakupów po emailu klienta
-    private List<Zakup> findZakupyByUserEmail(String email) {
-        // Najpierw znajdź klienta po emailu
-        return klientService.findByEmail(email)
-                .map(klient -> zakupService.findByKlientId(klient.getId()))
-                .orElse(List.of());
-    }
-
-    // Usuwanie tylko dla admina - UŻYWAMY TERAZ PROCEDURY Z BAZY
-    @PostMapping("/usun/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public String deleteZakup(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        try {
-            zakupService.remove(id);
-            redirectAttributes.addFlashAttribute("successMessage", "Zakup #" + id + " został usunięty.");
-        } catch (Exception e) {
-            System.err.println("Błąd podczas usuwania zakupu: " + e.getMessage());
-            e.printStackTrace();
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Błąd podczas usuwania zakupu: " + e.getMessage());
-        }
-        return "redirect:/zakupy";
-    }
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\config\DataLoader.java
---------------------------------------------------------------------------------------------------------------
-package pl.komis.config;
-
-import lombok.RequiredArgsConstructor;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
-import pl.komis.model.Samochod;
-import pl.komis.repository.SamochodRepository;
-
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Rezerwacja Serwisu</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: main-nav}"></div>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="fas fa-calendar-plus me-2"></i>
+                        Rezerwacja Serwisu
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Komunikaty -->
+                    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle"></i>
+                        <span th:text="${successMessage}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span th:text="${errorMessage}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <form th:action="@{/serwis/rezerwuj}" method="post">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Samochód *</label>
+                                <select class="form-select" name="samochodId" required>
+                                    <option value="">Wybierz samochód</option>
+                                    <option th:each="samochod : ${samochody}"
+                                            th:value="${samochod.id}"
+                                            th:text="${samochod.marka + ' ' + samochod.model + ' (ID: ' + samochod.id + ')'}">
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Pracownik *</label>
+                                <select class="form-select" name="pracownikId" required>
+                                    <option value="">Wybierz pracownika</option>
+                                    <option th:each="pracownik : ${pracownicy}"
+                                            th:value="${pracownik.id}"
+                                            th:text="${pracownik.imie + ' ' + pracownik.nazwisko}">
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Opis Usługi *</label>
+                            <textarea class="form-control" name="opisUslugi"
+                                      rows="4" placeholder="Opisz planowaną usługę..." required></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Data Serwisu *</label>
+                                <input type="date" class="form-control" name="dataSerwisu"
+                                       th:value="${#temporals.format(#temporals.createToday(), 'yyyy-MM-dd')}" required>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a th:href="@{/serwis}" class="btn btn-secondary me-md-2">
+                                <i class="fas fa-times"></i> Anuluj
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-calendar-check"></i> Zarezerwuj Serwis
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+
+�CIE�KA: C:\Users\Rafimaniaak\ProjektJAVA\komis-samochodowy-mongo\src\main\java\pl\komis\model\Samochod.java
+---------------------------------------------------------------------------------------------------------------
+package pl.komis.model;
+
+import lombok.Data;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Component
-@RequiredArgsConstructor
-public class DataLoader implements CommandLineRunner {
+@Document(collection = "samochody")
+@Data
+public class Samochod {
 
-    private final SamochodRepository samochodRepository;
+    @Id
+    private String id;
 
-    @Override
-    public void run(String... args) {
-        if (samochodRepository.count() == 0) {
-            // Dodaj samochody z wszystkimi wymaganymi polami
-            Samochod s1 = new Samochod();
-            s1.setMarka("BMW");
-            s1.setModel("Seria 3");
-            s1.setRokProdukcji(2020);
-            s1.setPrzebieg(50000);
-            s1.setPojemnoscSilnika(2.0);
-            s1.setRodzajPaliwa("Benzyna");
-            s1.setSkrzyniaBiegow("Automatyczna");
-            s1.setKolor("Czarny");
-            s1.setCena(new BigDecimal("120000"));
-            s1.setStatus("DOSTEPNY");
-            s1.setDataDodania(LocalDate.now());
+    private String marka;
+    private String model;
+    private Integer rokProdukcji;
+    private Integer przebieg;
+    private Double pojemnoscSilnika;
+    private String rodzajPaliwa;
+    private String skrzyniaBiegow;
+    private String kolor;
+    private BigDecimal cena;
+    private String status;
+    private LocalDate dataDodania;
+    private String zdjecieUrl;
 
-            Samochod s2 = new Samochod();
-            s2.setMarka("Audi");
-            s2.setModel("A4");
-            s2.setRokProdukcji(2019);
-            s2.setPrzebieg(60000);
-            s2.setPojemnoscSilnika(2.0);
-            s2.setRodzajPaliwa("Diesel");
-            s2.setSkrzyniaBiegow("Manualna");
-            s2.setKolor("Biały");
-            s2.setCena(new BigDecimal("95000"));
-            s2.setStatus("DOSTEPNY");
-            s2.setDataDodania(LocalDate.now());
+    @DBRef
+    private Klient zarezerwowanyPrzez;
 
-            samochodRepository.save(s1);
-            samochodRepository.save(s2);
-
-            System.out.println("Dodano samochody do bazy!");
-        }
-    }
+    private LocalDate dataRezerwacji;
 }
 
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\config\SecurityConfig.java
-------------------------------------------------------------------------------------------------------------------
-package pl.komis.config;
-
-import lombok.RequiredArgsConstructor;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-import pl.komis.model.User;
-import pl.komis.repository.UserRepository;
-
-@Configuration
-@EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
-@RequiredArgsConstructor
-public class SecurityConfig {
-
-    private final UserRepository userRepository;
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, @Lazy pl.komis.service.UserService userService) throws Exception {
-        http
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/css/**", "/js/**", "/images/**", "/api/**",
-                                "/samochody", "/samochody/szczegoly", "/register",
-                                "/search", "/search/**", "/login", "/debug/**").permitAll()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/klienci", "/pracownicy", "/serwis", "/serwis/**").hasRole("ADMIN")
-                        .requestMatchers("/samochody/nowy", "/samochody/edytuj/**",
-                                "/samochody/zapisz", "/samochody/usun/**").hasRole("ADMIN")
-                        .requestMatchers("/zakupy").hasRole("ADMIN")
-                        .requestMatchers("/zakupy/moje").authenticated()
-                        .anyRequest().authenticated()
-                )
-                .formLogin(form -> form
-                        .loginPage("/login")
-                        .loginProcessingUrl("/login")
-                        .defaultSuccessUrl("/samochody", true)
-                        .failureUrl("/login?error=true")
-                        .permitAll()
-                )
-                .logout(logout -> logout
-                        .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
-                        .logoutSuccessUrl("/?logout=true")
-                        .invalidateHttpSession(true)
-                        .deleteCookies("JSESSIONID")
-                        .permitAll()
-                )
-                .userDetailsService(userService)
-                .csrf(AbstractHttpConfigurer::disable);
-
-        return http.build();
-    }
-
-    @Bean
-    public CommandLineRunner createDefaultUsers() {
-        return args -> {
-            PasswordEncoder encoder = passwordEncoder();
-
-            // TYLKO jeśli nie ma żadnych użytkowników w bazie
-            if (userRepository.count() == 0) {
-                System.out.println("=== TWORZENIE DOMYŚLNYCH UŻYTKOWNIKÓW ===");
-
-                // Utwórz admina - BEZPOŚREDNIO przez repozytorium
-                User admin = User.builder()
-                        .username("admin")
-                        .email("admin@komis.pl")
-                        .password(encoder.encode("admin"))
-                        .role("ADMIN")
-                        .enabled(true)
-                        .build();
-                userRepository.save(admin);
-                System.out.println("✅ Utworzono admina: admin / admin");
-
-                // Utwórz user
-                User user = User.builder()
-                        .username("user")
-                        .email("user@komis.pl")
-                        .password(encoder.encode("user"))
-                        .role("USER")
-                        .enabled(true)
-                        .build();
-                userRepository.save(user);
-                System.out.println("✅ Utworzono usera: user / user");
-
-                // Utwórz user2
-                User user2 = User.builder()
-                        .username("user2")
-                        .email("user2@komis.pl")
-                        .password(encoder.encode("user123"))
-                        .role("USER")
-                        .enabled(true)
-                        .build();
-                userRepository.save(user2);
-                System.out.println("✅ Utworzono user2: user2 / user123");
-
-                System.out.println("=== UTWORZONO " + userRepository.count() + " UŻYTKOWNIKÓW ===");
-            } else {
-                System.out.println("⚠️  Użytkownicy już istnieją w bazie (" + userRepository.count() + ")");
-
-                // Sprawdź czy user2 istnieje, jeśli nie to go utwórz
-                if (userRepository.findByUsername("user2").isEmpty()) {
-                    User user2 = User.builder()
-                            .username("user2")
-                            .email("user2@komis.pl")
-                            .password(encoder.encode("user123"))
-                            .role("USER")
-                            .enabled(true)
-                            .build();
-                    userRepository.save(user2);
-                    System.out.println("✅ Utworzono brakującego użytkownika: user2 / user123");
-                }
-            }
-        };
-    }
-}
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\pl\komis\KomisApplication.java
--------------------------------------------------------------------------------------------------------------
-package pl.komis;
-
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-
-@SpringBootApplication
-public class KomisApplication {
-
-    public static void main(String[] args) {
-
-        SpringApplication.run(KomisApplication.class, args);
-
-    }
-
-}
-
-
-�CIE�KA: src/main/resources/import.sql
---------------------------------
--- INSERT INTO samochod (marka, model, rok_produkcji, cena, kolor, przebieg, status) VALUES
---                                                                                       ('BMW', 'Seria 3', 2020, 120000.00, 'Czarny', 50000, 'DOSTEPNY'),
---                                                                                       ('Audi', 'A4', 2019, 95000.00, 'Bia�y', 60000, 'DOSTEPNY'),
---                                                                                       ('Mercedes', 'Klasa C', 2021, 150000.00, 'Srebrny', 30000, 'SPRZEDANY'),
---                                                                                       ('Volkswagen', 'Golf', 2018, 65000.00, 'Czerwony', 80000, 'DOSTEPNY');
--- Tabela u�ytkownik�w
-CREATE TABLE public.users (
-                              id bigint NOT NULL,
-                              username character varying(50) NOT NULL,
-                              email character varying(100) NOT NULL,
-                              password character varying(255) NOT NULL,
-                              role character varying(20) DEFAULT 'USER',
-                              enabled boolean DEFAULT true,
-                              created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-                              klient_id bigint,
-                              CONSTRAINT users_pkey PRIMARY KEY (id),
-                              CONSTRAINT users_username_key UNIQUE (username),
-                              CONSTRAINT users_email_key UNIQUE (email),
-                              CONSTRAINT fk_users_klient FOREIGN KEY (klient_id) REFERENCES public.klient(id)
-);
-
--- Sekwencja
-CREATE SEQUENCE public.users_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-ALTER TABLE public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
-
--- Dodaj domy�lnego admina (has�o: admin)
--- Dodaj domy�lnego admina (has�o: admin)
-INSERT INTO public.users (username, email, password, role, enabled) VALUES (
-                                                                               'admin',
-                                                                               'admin@komis.pl',
-                                                                               '$2a$10$8.UnVuG9HHgffUDAlk8qfOuW2.4A3L7d3K3j6M3dMvR4n1pJQ1qW.',
-                                                                               'ADMIN',
-                                                                               true
-                                                                           ) ON CONFLICT (username) DO NOTHING;
-
--- Dodaj domy�lnego usera (has�o: user)
-INSERT INTO public.users (username, email, password, role, enabled) VALUES (
-                                                                               'user',
-                                                                               'user@komis.pl',
-                                                                               '$2a$10$8.UnVuG9HHgffUDAlk8qfOuW2.4A3L7d3K3j6M3dMvR4n1pJQ1qW.',
-                                                                               'USER',
-                                                                               true
-                                                                           ) ON CONFLICT (username) DO NOTHING;
-
-
-�CIE�KA: C:\Users\RAFIMANIAAK\IdeaProjects\komis-samochodowy3\src\main\java\GenerateBCryptHash.java
-------------------------------------------------------------------------------------------------------
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-
-public class GenerateBCryptHash {
-    public static void main(String[] args) {
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-
-        System.out.println("=== HASHE BCrypt dla 'haslo123' ===");
-        for (int i = 1; i <= 10; i++) {
-            String hash = encoder.encode("haslo123");
-            System.out.println("Hash " + i + ": " + hash);
-        }
-
-        // Aby zweryfikować
-        String testHash = encoder.encode("haslo123");
-        boolean matches = encoder.matches("haslo123", testHash);
-        System.out.println("\nWeryfikacja: hasło 'haslo123' pasuje do hash? " + matches);
-    }
-}
+================ PODSUMOWANIE ================
+Przetworzonych plik�w: 7
+Pomini�tych plik�w: 0
+B��d�w odczytu: 0
+Razem plik�w wej�ciowych: 7
+Data zako�czenia: 12/27/2025 22:03:12

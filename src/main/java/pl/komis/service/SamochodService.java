@@ -2,6 +2,7 @@ package pl.komis.service;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -38,6 +39,11 @@ public class SamochodService {
 
     @Transactional
     public Samochod save(Samochod samochod) {
+        // GENERUJ NOWE ID JEŚLI NIE MA
+        if (samochod.getId() == null || samochod.getId().trim().isEmpty()) {
+            samochod.setId(new ObjectId().toString());
+        }
+
         if (samochod.getDataDodania() == null) {
             samochod.setDataDodania(LocalDate.now());
         }
