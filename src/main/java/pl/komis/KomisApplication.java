@@ -8,5 +8,6 @@ public class KomisApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(KomisApplication.class, args);
+
     }
 }

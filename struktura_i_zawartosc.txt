@@ -1,864 +1,166 @@
-Eksport wybranych plik體
-Wygenerowano: 12/27/2025 22:03:12
-
-
-孋IE疜A: C:\Users\Rafimaniaak\ProjektJAVA\komis-samochodowy-mongo\src\main\java\pl\komis\controller\SerwisController.java
-----------------------------------------------------------------------------------------------------------------------------
-package pl.komis.controller;
-
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import pl.komis.model.Samochod;
-import pl.komis.model.Serwis;
-import pl.komis.service.SamochodService;
-import pl.komis.service.SerwisService;
-import pl.komis.service.PracownikService;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
-
-@Controller
-@RequestMapping("/serwis")
-@RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
-public class SerwisController {
-    private final SerwisService serwisService;
-    private final SamochodService samochodService;
-    private final PracownikService pracownikService;
-
-    @GetMapping
-    public String listSerwisy(Model model) {
-        List<Serwis> serwisy = serwisService.findAll();
-        long zarezerwowane = serwisService.countZarezerwowane();
-        long zakonczone = serwisService.countZakonczone();
-        BigDecimal lacznyKoszt = serwisService.getTotalKoszt();
-
-        model.addAttribute("serwisy", serwisy);
-        model.addAttribute("zarezerwowane", zarezerwowane);
-        model.addAttribute("zakonczone", zakonczone);
-        model.addAttribute("lacznyKoszt", lacznyKoszt);
-        model.addAttribute("tytul", "Lista Serwis贸w");
-        return "serwis/lista";
-    }
-
-    @GetMapping("/dodaj")
-    public String newSerwisForm(Model model) {
-        List<Samochod> samochody = samochodService.findAll();
-
-        model.addAttribute("serwis", new Serwis());
-        model.addAttribute("samochody", samochody);
-        model.addAttribute("pracownicy", pracownikService.findAll());
-        model.addAttribute("tytul", "Dodaj nowy serwis");
-        return "serwis/form";
-    }
-
-    @PostMapping("/zapisz")
-    public String saveSerwis(@ModelAttribute Serwis serwis,
-                             @RequestParam(required = false) String id,
-                             @RequestParam String samochodId,
-                             @RequestParam String pracownikId,
-                             RedirectAttributes redirectAttributes) {
-        try {
-            if (id != null && !id.isEmpty()) {
-                serwis.setId(id);
-            }
-            serwis.setSamochodId(samochodId);
-            serwis.setPracownikId(pracownikId);
-
-            serwisService.save(serwis);
-            redirectAttributes.addFlashAttribute("successMessage", "Serwis zapisany pomy艣lnie");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "B艂膮d: " + e.getMessage());
-        }
-        return "redirect:/serwis";
-    }
-
-    @GetMapping("/edytuj/{id}")
-    public String editSerwisForm(@PathVariable String id, Model model) {
-        Serwis serwis = serwisService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Serwis nie znaleziony"));
-
-        List<Samochod> samochody = samochodService.findAll();
-
-        model.addAttribute("serwis", serwis);
-        model.addAttribute("samochody", samochody);
-        model.addAttribute("pracownicy", pracownikService.findAll());
-        model.addAttribute("tytul", "Edytuj serwis");
-        return "serwis/form";
-    }
-
-    @PostMapping("/usun/{id}")
-    public String deleteSerwis(@PathVariable String id, RedirectAttributes redirectAttributes) {
-        try {
-            serwisService.delete(id);
-            redirectAttributes.addFlashAttribute("successMessage", "Serwis usuni臋ty pomy艣lnie");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "B艂膮d: " + e.getMessage());
-        }
-        return "redirect:/serwis";
-    }
-
-    @GetMapping("/zarezerwowane")
-    public String reservedServices(Model model) {
-        List<Serwis> reservedServices = serwisService.findZarezerwowane();
-        model.addAttribute("serwisy", reservedServices);
-        model.addAttribute("tytul", "Zarezerwowane serwisy");
-        return "serwis/lista";
-    }
-
-    @GetMapping("/zakonczone")
-    public String completedServices(Model model) {
-        List<Serwis> completedServices = serwisService.findZakonczone();
-        model.addAttribute("serwisy", completedServices);
-        model.addAttribute("tytul", "Zako艅czone serwisy");
-        return "serwis/lista";
-    }
-}
-
-
-孋IE疜A: C:\Users\Rafimaniaak\ProjektJAVA\komis-samochodowy-mongo\src\main\java\pl\komis\repository\SamochodRepository.java
-------------------------------------------------------------------------------------------------------------------------------
-package pl.komis.repository;
-
-import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.mongodb.repository.Query;
-import org.springframework.stereotype.Repository;
-import pl.komis.model.Samochod;
-
-import java.math.BigDecimal;
-import java.util.List;
-
-@Repository
-public interface SamochodRepository extends MongoRepository<Samochod, String> {
-
-    List<Samochod> findByMarkaIgnoreCase(String marka);
-    List<Samochod> findByModelIgnoreCase(String model);
-    List<Samochod> findByStatus(String status);
-    List<Samochod> findByCenaBetween(BigDecimal minCena, BigDecimal maxCena);
-
-    @Query(value = "{}", fields = "{'marka' : 1}")
-    List<Samochod> findAllMarkiDistinct();
-
-    long countByStatus(String status);
-
-    // Proste wyszukiwanie z opcjonalnymi parametrami
-    @Query("{$or: [" +
-            "{'marka': {$regex: ?0, $options: 'i'}}, " +
-            "{'model': {$regex: ?1, $options: 'i'}}, " +
-            "{'status': {$regex: ?2, $options: 'i'}} " +
-            "]}")
-    List<Samochod> searchCarsSimple(String marka, String model, String status);
-    // Zaawansowane wyszukiwanie - u偶yj Criteria w serwisie zamiast @Query
-    // Metoda searchCars b臋dzie implementowana w serwisie za pomoc膮 Criteria
-}
-
-
-孋IE疜A: C:\Users\Rafimaniaak\ProjektJAVA\komis-samochodowy-mongo\src\main\java\pl\komis\service\SamochodService.java
-------------------------------------------------------------------------------------------------------------------------
-package pl.komis.service;
-
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import pl.komis.model.Samochod;
-import pl.komis.repository.SamochodRepository;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-@Service
-@RequiredArgsConstructor
-@Transactional
-public class SamochodService {
-
-    private final SamochodRepository samochodRepository;
-    private final MongoTemplate mongoTemplate;
-
-    @Transactional(readOnly = true)
-    public List<Samochod> findAll() {
-        return samochodRepository.findAll();
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<Samochod> findById(String id) {
-        return samochodRepository.findById(id);
-    }
-
-    @Transactional
-    public Samochod save(Samochod samochod) {
-        if (samochod.getDataDodania() == null) {
-            samochod.setDataDodania(LocalDate.now());
-        }
-        if (samochod.getRodzajPaliwa() == null) {
-            samochod.setRodzajPaliwa("Benzyna");
-        }
-        if (samochod.getSkrzyniaBiegow() == null) {
-            samochod.setSkrzyniaBiegow("Manualna");
-        }
-        if (samochod.getPojemnoscSilnika() == null) {
-            samochod.setPojemnoscSilnika(2.0);
-        }
-        if (samochod.getStatus() == null) {
-            samochod.setStatus("DOSTEPNY");
-        }
-
-        String zdjecieUrl = samochod.getZdjecieUrl();
-        if (zdjecieUrl == null) {
-            zdjecieUrl = "";
-            samochod.setZdjecieUrl(zdjecieUrl);
-        }
-
-        return samochodRepository.save(samochod);
-    }
-
-    @Transactional(readOnly = true)
-    public List<Samochod> searchCars(SearchCriteria criteria) {
-        Query query = new Query();
-        List<Criteria> criteriaList = new ArrayList<>();
-
-        if (criteria.getMarka() != null && !criteria.getMarka().trim().isEmpty()) {
-            criteriaList.add(Criteria.where("marka").regex(criteria.getMarka(), "i"));
-        }
-
-        if (criteria.getModel() != null && !criteria.getModel().trim().isEmpty()) {
-            criteriaList.add(Criteria.where("model").regex(criteria.getModel(), "i"));
-        }
-
-        if (criteria.getStatus() != null && !criteria.getStatus().trim().isEmpty()) {
-            criteriaList.add(Criteria.where("status").is(criteria.getStatus()));
-        }
-
-        if (criteria.getMinRok() != null) {
-            criteriaList.add(Criteria.where("rokProdukcji").gte(criteria.getMinRok()));
-        }
-
-        if (criteria.getMaxRok() != null) {
-            criteriaList.add(Criteria.where("rokProdukcji").lte(criteria.getMaxRok()));
-        }
-
-        if (criteria.getMinPrzebieg() != null) {
-            criteriaList.add(Criteria.where("przebieg").gte(criteria.getMinPrzebieg()));
-        }
-
-        if (criteria.getMaxPrzebieg() != null) {
-            criteriaList.add(Criteria.where("przebieg").lte(criteria.getMaxPrzebieg()));
-        }
-
-        if (criteria.getMinCena() != null) {
-            criteriaList.add(Criteria.where("cena").gte(criteria.getMinCena()));
-        }
-
-        if (criteria.getMaxCena() != null) {
-            criteriaList.add(Criteria.where("cena").lte(criteria.getMaxCena()));
-        }
-
-        if (criteria.getRodzajPaliwa() != null && !criteria.getRodzajPaliwa().trim().isEmpty()) {
-            criteriaList.add(Criteria.where("rodzajPaliwa").is(criteria.getRodzajPaliwa()));
-        }
-
-        if (!criteriaList.isEmpty()) {
-            query.addCriteria(new Criteria().andOperator(criteriaList.toArray(new Criteria[0])));
-        }
-
-        System.out.println("DEBUG: MongoDB Query: " + query.toString());
-        List<Samochod> results = mongoTemplate.find(query, Samochod.class);
-        System.out.println("DEBUG: Found " + results.size() + " cars");
-
-        return results;
-    }
-
-    @Transactional(readOnly = true)
-    public List<Samochod> searchCarsSimple(String marka, String model, String status) {
-        String searchMarka = (marka != null && !marka.trim().isEmpty()) ? marka : ".*";
-        String searchModel = (model != null && !model.trim().isEmpty()) ? model : ".*";
-        String searchStatus = (status != null && !status.trim().isEmpty()) ? status : ".*";
-
-        return samochodRepository.searchCarsSimple(searchMarka, searchModel, searchStatus);
-    }
-
-    @Transactional(readOnly = true)
-    public List<Samochod> findByMarka(String marka) {
-        return samochodRepository.findByMarkaIgnoreCase(marka);
-    }
-
-    @Transactional(readOnly = true)
-    public List<Samochod> findByModel(String model) {
-        return samochodRepository.findByModelIgnoreCase(model);
-    }
-
-    @Transactional(readOnly = true)
-    public List<Samochod> findByStatus(String status) {
-        return samochodRepository.findByStatus(status);
-    }
-
-    @Transactional(readOnly = true)
-    public List<Samochod> findByCenaBetween(BigDecimal min, BigDecimal max) {
-        return samochodRepository.findByCenaBetween(min, max);
-    }
-
-    @Transactional(readOnly = true)
-    public long count() {
-        return samochodRepository.count();
-    }
-
-    @Transactional(readOnly = true)
-    public long countByStatus(String status) {
-        return samochodRepository.countByStatus(status);
-    }
-
-    @Transactional(readOnly = true)
-    public List<Samochod> findAvailableCars() {
-        return samochodRepository.findByStatus("DOSTEPNY");
-    }
-
-    @Transactional(readOnly = true)
-    public List<Samochod> findSoldCars() {
-        return samochodRepository.findByStatus("SPRZEDANY");
-    }
-
-    @Transactional(readOnly = true)
-    public List<Samochod> findReservedCars() {
-        return samochodRepository.findByStatus("ZAREZERWOWANY");
-    }
-
-    @Transactional(readOnly = true)
-    public boolean existsById(String id) {
-        return samochodRepository.existsById(id);
-    }
-
-    @Transactional
-    public void delete(String id) {
-        samochodRepository.deleteById(id);
-    }
-
-    @Transactional
-    public Samochod updateStatus(String id, String newStatus) {
-        Samochod samochod = samochodRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Samoch贸d nie znaleziony"));
-        samochod.setStatus(newStatus);
-        return samochodRepository.save(samochod);
-    }
-
-    @Transactional(readOnly = true)
-    public List<String> findAllMarki() {
-        List<Samochod> samochody = samochodRepository.findAll();
-        return samochody.stream()
-                .map(Samochod::getMarka)
-                .distinct()
-                .sorted()
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public Map<String, Object> getCarStatistics() {
-        long total = count();
-        long available = countByStatus("DOSTEPNY");
-        long sold = countByStatus("SPRZEDANY");
-        long reserved = countByStatus("ZAREZERWOWANY");
-
-        return Map.of(
-                "total", total,
-                "available", available,
-                "sold", sold,
-                "reserved", reserved
-        );
-    }
-
-    @Data
-    public static class SearchCriteria {
-        private String marka;
-        private String model;
-        private Integer minRok;
-        private Integer maxRok;
-        private Integer minPrzebieg;
-        private Integer maxPrzebieg;
-        private BigDecimal minCena;
-        private BigDecimal maxCena;
-        private String rodzajPaliwa;
-        private String status;
-    }
-}
-
-
-孋IE疜A: C:\Users\Rafimaniaak\ProjektJAVA\komis-samochodowy-mongo\src\main\resources\templates\serwis\lista.html
--------------------------------------------------------------------------------------------------------------------
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="${tytul}">Lista Serwis贸w</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>馃殫</text></svg>">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body { padding-top: 70px; background-color: #f8f9fa; }
-        .navbar-custom { background-color: #343a40 !important; }
-        .stat-card { padding: 20px; border-radius: 10px; color: white; text-align: center; margin-bottom: 15px; }
-        .table-responsive { border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    </style>
-</head>
-<body>
-
-<!-- Fixed Navigation -->
-<nav class="navbar navbar-expand-lg navbar-dark fixed-top navbar-custom">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="/">
-            <i class="fas fa-car"></i> Komis Samochodowy
-        </a>
-
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav" sec:authorize="hasRole('ADMIN')">
-                <li class="nav-item"><a class="nav-link" th:href="@{/admin}"><i class="fas fa-tachometer-alt"></i> Panel Admina</a></li>
-                <li class="nav-item"><a class="nav-link" th:href="@{/admin/users}"><i class="fas fa-user-friends"></i> U偶ytkownicy</a></li>
-                <li class="nav-item"><a class="nav-link" th:href="@{/klienci}"><i class="fas fa-users"></i> Klienci</a></li>
-                <li class="nav-item"><a class="nav-link" th:href="@{/pracownicy}"><i class="fas fa-id-badge"></i> Pracownicy</a></li>
-                <li class="nav-item"><a class="nav-link active" th:href="@{/serwis}"><i class="fas fa-tools"></i> Serwis</a></li>
-                <li class="nav-item"><a class="nav-link" th:href="@{/zakupy}"><i class="fas fa-shopping-cart"></i> Wszystkie zakupy</a></li>
-                <li class="nav-item"><a class="nav-link" th:href="@{/zakupy/rabaty}"><i class="fas fa-gift"></i> Premie</a></li>
-            </ul>
-
-            <ul class="navbar-nav">
-                <li class="nav-item"><a class="nav-link" href="/samochody"><i class="fas fa-car"></i> Samochody</a></li>
-                <li class="nav-item"><a class="nav-link" href="/search"><i class="fas fa-search"></i> Wyszukiwanie</a></li>
-            </ul>
-
-            <ul class="navbar-nav ms-auto" sec:authorize="isAuthenticated()">
-                <li class="nav-item">
-                    <span class="navbar-text me-3">
-                        <i class="fas fa-user"></i> <span sec:authentication="name"></span>
-                    </span>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" th:href="@{/logout}">
-                        <i class="fas fa-sign-out-alt"></i> Wyloguj
-                    </a>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>
-
-<div class="container mt-3">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1><i class="fas fa-tools me-2"></i> <span th:text="${tytul}">Lista Serwis贸w</span></h1>
-        <div>
-            <a href="/serwis/dodaj" class="btn btn-success">
-                <i class="fas fa-plus"></i> Dodaj Serwis
-            </a>
-            <a href="/serwis/rezerwuj" class="btn btn-warning ms-2">
-                <i class="fas fa-calendar-plus"></i> Zarezerwuj
-            </a>
-        </div>
-    </div>
-
-    <!-- Statystyki -->
-    <div th:if="${tytul == 'Lista Serwis贸w'}" class="row mb-4">
-        <div class="col-md-4"><div class="stat-card bg-warning"><i class="fas fa-clock fa-2x mb-2"></i><h3 th:text="${zarezerwowane}">0</h3><p class="mb-0">Zarezerwowane</p></div></div>
-        <div class="col-md-4"><div class="stat-card bg-success"><i class="fas fa-check-circle fa-2x mb-2"></i><h3 th:text="${zakonczone}">0</h3><p class="mb-0">Zako艅czone</p></div></div>
-        <div class="col-md-4"><div class="stat-card bg-info"><i class="fas fa-money-bill fa-2x mb-2"></i><h3 th:text="${#numbers.formatDecimal(lacznyKoszt, 0, 'COMMA', 2, 'POINT') + ' z艂'}">0 z艂</h3><p class="mb-0">艁膮czny koszt</p></div></div>
-    </div>
-
-    <!-- Komunikaty -->
-    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="fas fa-check-circle"></i><span th:text="${successMessage}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="fas fa-exclamation-triangle"></i><span th:text="${errorMessage}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-
-    <!-- Filtry -->
-    <div class="card mb-4">
-        <div class="card-header bg-light"><h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtry</h5></div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-3 mb-2"><a href="/serwis" class="btn btn-outline-primary w-100">Wszystkie</a></div>
-                <div class="col-md-3 mb-2"><a href="/serwis/zarezerwowane" class="btn btn-outline-warning w-100">Zarezerwowane</a></div>
-                <div class="col-md-3 mb-2"><a href="/serwis/zakonczone" class="btn btn-outline-success w-100">Zako艅czone</a></div>
-                <div class="col-md-3 mb-2"><a href="/samochody" class="btn btn-outline-secondary w-100">Samochody</a></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tabela serwis贸w -->
-    <div class="card">
-        <div class="card-header"><h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista serwis贸w</h5></div>
-        <div class="card-body">
-            <div th:if="${serwisy.empty}" class="alert alert-info text-center">
-                <i class="fas fa-info-circle"></i> Brak serwis贸w w systemie.
-            </div>
-
-            <div th:if="${!serwisy.empty}" class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="table-dark">
-                    <tr>
-                        <th>ID</th><th>Data</th><th>Samoch贸d</th><th>Pracownik</th><th>Opis</th><th>Koszt</th><th>Status</th><th>Akcje</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr th:each="serwis : ${serwisy}">
-                        <td th:text="${serwis.id}"></td>
-                        <td th:text="${serwis.dataSerwisu}"></td>
-                        <td>
-                            <span th:if="${samochodyMap != null && samochodyMap.containsKey(serwis.samochodId)}"
-                                  th:text="${samochodyMap[serwis.samochodId].marka + ' ' + samochodyMap[serwis.samochodId].model}">
-                            </span>
-                            <span th:unless="${samochodyMap != null && samochodyMap.containsKey(serwis.samochodId)}"
-                                  th:text="'ID: ' + ${serwis.samochodId}" class="text-muted">
-                            </span>
-                        </td>
-                        <td>
-                            <span th:if="${pracownicyMap != null && pracownicyMap.containsKey(serwis.pracownikId)}"
-                                  th:text="${pracownicyMap[serwis.pracownikId].imie + ' ' + pracownicyMap[serwis.pracownikId].nazwisko}">
-                            </span>
-                            <span th:unless="${pracownicyMap != null && pracownicyMap.containsKey(serwis.pracownikId)}"
-                                  th:text="'ID: ' + ${serwis.pracownikId}" class="text-muted">
-                            </span>
-                        </td>
-                        <td><small th:text="${serwis.opisUslugi}"></small></td>
-                        <td>
-                            <span th:if="${serwis.koszt != null}"
-                                  th:text="${#numbers.formatDecimal(serwis.koszt, 0, 'COMMA', 2, 'POINT') + ' z艂'}"
-                                  class="fw-bold text-success"></span>
-                            <span th:if="${serwis.koszt == null}" class="text-muted">-</span>
-                        </td>
-                        <td>
-                            <span th:if="${serwis.status == 'ZAREZERWOWANY'}" class="badge bg-warning" th:text="${serwis.status}"></span>
-                            <span th:if="${serwis.status == 'ZAKO艃CZONY'}" class="badge bg-success" th:text="${serwis.status}"></span>
-                        </td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <a th:href="@{/serwis/edytuj/{id}(id=${serwis.id})}" class="btn btn-outline-primary" title="Edytuj"><i class="fas fa-edit"></i></a>
-                                <th:block th:if="${serwis.status == 'ZAREZERWOWANY'}">
-                                    <a th:href="@{/serwis/zakoncz/{id}(id=${serwis.id})}" class="btn btn-outline-success" title="Zako艅cz"><i class="fas fa-check"></i></a>
-                                    <form th:action="@{/serwis/anuluj/{id}(id=${serwis.id})}" method="post" style="display: inline;">
-                                        <button type="submit" class="btn btn-outline-danger" title="Anuluj" onclick="return confirm('Czy na pewno chcesz anulowa膰 ten serwis?')"><i class="fas fa-times"></i></button>
-                                    </form>
-                                </th:block>
-                                <form th:action="@{/serwis/usun/{id}(id=${serwis.id})}" method="post" style="display: inline;">
-                                    <button type="submit" class="btn btn-outline-danger" title="Usu艅" onclick="return confirm('Czy na pewno chcesz usun膮膰 ten serwis?')"><i class="fas fa-trash"></i></button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="mt-3">
-        <a th:href="@{/admin}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Powr贸t do panelu
-        </a>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
-
-
-孋IE疜A: C:\Users\Rafimaniaak\ProjektJAVA\komis-samochodowy-mongo\src\main\resources\templates\serwis\form.html
-------------------------------------------------------------------------------------------------------------------
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title th:text="${tytul}">Formularz Serwisu</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>馃殫</text></svg>">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        .status-info { font-size: 0.9em; }
-        .debug-info { font-size: 0.7em; color: #6c757d; }
-    </style>
-</head>
-<body>
-<div th:replace="~{fragments/navbar :: main-nav}"></div>
-
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header" th:classappend="${serwis.id == null} ? 'bg-success' : 'bg-primary'">
-                    <h4 class="mb-0 text-white">
-                        <i class="fas" th:classappend="${serwis.id == null} ? 'fa-plus' : 'fa-edit'"></i>
-                        <span th:text="${tytul}">Formularz Serwisu</span>
-                    </h4>
-                </div>
-                <div class="card-body">
-                    <!-- Komunikaty -->
-                    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="fas fa-check-circle"></i>
-                        <span th:text="${successMessage}"></span>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-
-                    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span th:text="${errorMessage}"></span>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-
-                    <form th:action="@{/serwis/zapisz}" method="post">
-                        <input type="hidden" name="id" th:value="${serwis.id}">
-
-                        <div class="mb-3">
-                            <label for="samochodId" class="form-label">Samoch贸d *</label>
-                            <select class="form-select" id="samochodId" name="samochodId" required>
-                                <option value="">Wybierz samoch贸d</option>
-                                <option th:each="s : ${samochody}"
-                                        th:value="${s.id}"
-                                        th:text="${s.marka + ' ' + s.model + ' (' + s.rokProdukcji + ')'}"
-                                        th:selected="${serwis.samochodId == s.id}">
-                                </option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="pracownikId" class="form-label">Pracownik *</label>
-                            <select class="form-select" id="pracownikId" name="pracownikId" required>
-                                <option value="">Wybierz pracownika</option>
-                                <option th:each="p : ${pracownicy}"
-                                        th:value="${p.id}"
-                                        th:text="${p.imie + ' ' + p.nazwisko + ' - ' + p.stanowisko}"
-                                        th:selected="${serwis.pracownikId == p.id}">
-                                </option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="opisUslugi" class="form-label">Opis us艂ugi *</label>
-                            <textarea class="form-control" id="opisUslugi" name="opisUslugi"
-                                      rows="4" required placeholder="Opisz us艂ug臋 do wykonania..."
-                                      th:text="${serwis.opisUslugi}"></textarea>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="koszt" class="form-label">Koszt (z艂)</label>
-                                <input type="number" step="0.01" class="form-control" id="koszt"
-                                       name="koszt" min="0" placeholder="0.00" th:value="${serwis.koszt}">
-                                <div class="form-text">Pozostaw puste aby utworzy膰 rezerwacj臋</div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="dataSerwisu" class="form-label">Data serwisu *</label>
-                                <input type="date" class="form-control" id="dataSerwisu"
-                                       name="dataSerwisu" required th:value="${serwis.dataSerwisu}">
-                            </div>
-                        </div>
-
-                        <!-- Informacja o statusie -->
-                        <div th:if="${serwis.status == 'ZAREZERWOWANY'}" class="alert alert-warning">
-                            <i class="fas fa-clock"></i>
-                            <strong>Status: ZAREZERWOWANY</strong><br>
-                            Aby zako艅czy膰 serwis, wprowad藕 koszt powy偶ej.
-                        </div>
-
-                        <div th:if="${serwis.status == 'ZAKO艃CZONY'}" class="alert alert-success">
-                            <i class="fas fa-check-circle"></i>
-                            <strong>Status: ZAKO艃CZONY</strong><br>
-                            Aktualny koszt: <span th:text="${#numbers.formatDecimal(serwis.koszt, 0, 'COMMA', 2, 'POINT') + ' z艂'}"></span>
-                        </div>
-
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="/serwis" class="btn btn-secondary me-md-2">Anuluj</a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i>
-                                <span th:text="${serwis.id == null} ? 'Dodaj Serwis' : 'Zaktualizuj Serwis'"></span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const dataInput = document.getElementById('dataSerwisu');
-        if (dataInput) {
-            dataInput.addEventListener('change', function() {
-                const selectedDate = new Date(this.value);
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-
-                if (selectedDate < today) {
-                    this.classList.add('is-invalid');
-                    alert('Data serwisu nie mo偶e by膰 z przesz艂o艣ci!');
-                } else {
-                    this.classList.remove('is-invalid');
-                }
-            });
-        }
-    });
-</script>
-</body>
-</html>
-
-
-孋IE疜A: C:\Users\Rafimaniaak\ProjektJAVA\komis-samochodowy-mongo\src\main\resources\templates\serwis\rezerwacja.html
-------------------------------------------------------------------------------------------------------------------------
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>Rezerwacja Serwisu</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>馃殫</text></svg>">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-<body>
-<div th:replace="~{fragments/navbar :: main-nav}"></div>
-
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header bg-warning text-dark">
-                    <h4 class="mb-0">
-                        <i class="fas fa-calendar-plus me-2"></i>
-                        Rezerwacja Serwisu
-                    </h4>
-                </div>
-                <div class="card-body">
-                    <!-- Komunikaty -->
-                    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="fas fa-check-circle"></i>
-                        <span th:text="${successMessage}"></span>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-
-                    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span th:text="${errorMessage}"></span>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-
-                    <form th:action="@{/serwis/rezerwuj}" method="post">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Samoch贸d *</label>
-                                <select class="form-select" name="samochodId" required>
-                                    <option value="">Wybierz samoch贸d</option>
-                                    <option th:each="samochod : ${samochody}"
-                                            th:value="${samochod.id}"
-                                            th:text="${samochod.marka + ' ' + samochod.model + ' (ID: ' + samochod.id + ')'}">
-                                    </option>
-                                </select>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Pracownik *</label>
-                                <select class="form-select" name="pracownikId" required>
-                                    <option value="">Wybierz pracownika</option>
-                                    <option th:each="pracownik : ${pracownicy}"
-                                            th:value="${pracownik.id}"
-                                            th:text="${pracownik.imie + ' ' + pracownik.nazwisko}">
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Opis Us艂ugi *</label>
-                            <textarea class="form-control" name="opisUslugi"
-                                      rows="4" placeholder="Opisz planowan膮 us艂ug臋..." required></textarea>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Data Serwisu *</label>
-                                <input type="date" class="form-control" name="dataSerwisu"
-                                       th:value="${#temporals.format(#temporals.createToday(), 'yyyy-MM-dd')}" required>
-                            </div>
-                        </div>
-
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a th:href="@{/serwis}" class="btn btn-secondary me-md-2">
-                                <i class="fas fa-times"></i> Anuluj
-                            </a>
-                            <button type="submit" class="btn btn-warning">
-                                <i class="fas fa-calendar-check"></i> Zarezerwuj Serwis
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
-
-
-孋IE疜A: C:\Users\Rafimaniaak\ProjektJAVA\komis-samochodowy-mongo\src\main\java\pl\komis\model\Samochod.java
----------------------------------------------------------------------------------------------------------------
-package pl.komis.model;
-
-import lombok.Data;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.DBRef;
-import org.springframework.data.mongodb.core.mapping.Document;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-
-@Document(collection = "samochody")
-@Data
-public class Samochod {
-
-    @Id
-    private String id;
-
-    private String marka;
-    private String model;
-    private Integer rokProdukcji;
-    private Integer przebieg;
-    private Double pojemnoscSilnika;
-    private String rodzajPaliwa;
-    private String skrzyniaBiegow;
-    private String kolor;
-    private BigDecimal cena;
-    private String status;
-    private LocalDate dataDodania;
-    private String zdjecieUrl;
-
-    @DBRef
-    private Klient zarezerwowanyPrzez;
-
-    private LocalDate dataRezerwacji;
-}
+Eksport struktury katalog體 i plik體
+Wygenerowano: 12/28/2025 00:32:32
+.idea
+komis-dump
+komis-mongodb
+src
+.gitignore
+EksportujStrukture.ps1
+EksportujStrukture_wybor.ps1
+komis-samochodowy.iml
+Komis_samochodowy.iml
+pom.xml
+README.md
+.idea\.gitignore
+.idea\compiler.xml
+.idea\encodings.xml
+.idea\jarRepositories.xml
+.idea\misc.xml
+.idea\vcs.xml
+.idea\workspace.xml
+komis-dump\komis
+komis-dump\komis\klienci.bson
+komis-dump\komis\klienci.metadata.json
+komis-dump\komis\komis.bson
+komis-dump\komis\komis.metadata.json
+komis-dump\komis\pracownicy.bson
+komis-dump\komis\pracownicy.metadata.json
+komis-dump\komis\prelude.json
+komis-dump\komis\samochody.bson
+komis-dump\komis\samochody.metadata.json
+komis-dump\komis\users.bson
+komis-dump\komis\users.metadata.json
+komis-dump\komis\zakupy.bson
+komis-dump\komis\zakupy.metadata.json
+komis-mongodb\.idea
+komis-mongodb\models
+komis-mongodb\scripts
+komis-mongodb\.env
+komis-mongodb\package-lock.json
+komis-mongodb\package.json
+komis-mongodb\server.js
+komis-mongodb\start.bat
+komis-mongodb\.idea\.gitignore
+komis-mongodb\.idea\komis-mongodb.iml
+komis-mongodb\.idea\misc.xml
+komis-mongodb\.idea\modules.xml
+komis-mongodb\models\Klient.js
+komis-mongodb\models\Pracownik.js
+komis-mongodb\models\Samochod.js
+komis-mongodb\scripts\create-indexes.js
+komis-mongodb\scripts\migrate.js
+src\main
+src\main\java
+src\main\resources
+src\main\java\pl
+src\main\java\GenerateBCryptHash.java
+src\main\java\pl\komis
+src\main\java\pl\komis\config
+src\main\java\pl\komis\controller
+src\main\java\pl\komis\dto
+src\main\java\pl\komis\model
+src\main\java\pl\komis\repository
+src\main\java\pl\komis\service
+src\main\java\pl\komis\KomisApplication.java
+src\main\java\pl\komis\config\MongoConfig.java
+src\main\java\pl\komis\config\MongoDataMigrator.java
+src\main\java\pl\komis\config\SecurityConfig.java
+src\main\java\pl\komis\controller\AdminController.java
+src\main\java\pl\komis\controller\AdminUserController.java
+src\main\java\pl\komis\controller\DebugController.java
+src\main\java\pl\komis\controller\FileUploadController.java
+src\main\java\pl\komis\controller\KlientController.java
+src\main\java\pl\komis\controller\KlientPromocjaController.java
+src\main\java\pl\komis\controller\LoginController.java
+src\main\java\pl\komis\controller\PracownikController.java
+src\main\java\pl\komis\controller\PremiaController.java
+src\main\java\pl\komis\controller\PromocjaController.java
+src\main\java\pl\komis\controller\RegisterController.java
+src\main\java\pl\komis\controller\SamochodController.java
+src\main\java\pl\komis\controller\SearchController.java
+src\main\java\pl\komis\controller\SerwisController.java
+src\main\java\pl\komis\controller\StronaController.java
+src\main\java\pl\komis\controller\ZakupController.java
+src\main\java\pl\komis\dto\RegisterRequest.java
+src\main\java\pl\komis\model\Klient.java
+src\main\java\pl\komis\model\KlientPromocja.java
+src\main\java\pl\komis\model\Pracownik.java
+src\main\java\pl\komis\model\Promocja.java
+src\main\java\pl\komis\model\Samochod.java
+src\main\java\pl\komis\model\Serwis.java
+src\main\java\pl\komis\model\User.java
+src\main\java\pl\komis\model\Zakup.java
+src\main\java\pl\komis\repository\KlientPromocjaRepository.java
+src\main\java\pl\komis\repository\KlientRepository.java
+src\main\java\pl\komis\repository\PracownikRepository.java
+src\main\java\pl\komis\repository\PromocjaRepository.java
+src\main\java\pl\komis\repository\SamochodRepository.java
+src\main\java\pl\komis\repository\SerwisRepository.java
+src\main\java\pl\komis\repository\UserRepository.java
+src\main\java\pl\komis\repository\ZakupRepository.java
+src\main\java\pl\komis\service\KlientPromocjaService.java
+src\main\java\pl\komis\service\KlientService.java
+src\main\java\pl\komis\service\PracownikService.java
+src\main\java\pl\komis\service\PromocjaService.java
+src\main\java\pl\komis\service\SamochodService.java
+src\main\java\pl\komis\service\SerwisService.java
+src\main\java\pl\komis\service\UserService.java
+src\main\java\pl\komis\service\ZakupService.java
+src\main\java\pl\komis\service\ZdjecieMigracjaService.java
+src\main\resources\static
+src\main\resources\templates
+src\main\resources\application.yml
+src\main\resources\import.sql
+src\main\resources\static\images
+src\main\resources\static\images\samochody
+src\main\resources\static\images\samochody\domyslny.jpg
+src\main\resources\templates\admin
+src\main\resources\templates\fragments
+src\main\resources\templates\klieci
+src\main\resources\templates\premia
+src\main\resources\templates\samochody
+src\main\resources\templates\search
+src\main\resources\templates\serwis
+src\main\resources\templates\zakupy
+src\main\resources\templates\error.html
+src\main\resources\templates\index.html
+src\main\resources\templates\klienci.html
+src\main\resources\templates\layout.html
+src\main\resources\templates\login.html
+src\main\resources\templates\pracownicy.html
+src\main\resources\templates\register.html
+src\main\resources\templates\samochody.html
+src\main\resources\templates\serwis_form.html
+src\main\resources\templates\serwis_lista.html
+src\main\resources\templates\serwis_raport.html
+src\main\resources\templates\zakupy_form.html
+src\main\resources\templates\zakupy_lista.html
+src\main\resources\templates\admin\change-password.html
+src\main\resources\templates\admin\panel.html
+src\main\resources\templates\admin\user-form.html
+src\main\resources\templates\admin\users.html
+src\main\resources\templates\fragments\navbar.html
+src\main\resources\templates\fragments\samochod-form-fields.html
+src\main\resources\templates\klieci\szczegoly.html
+src\main\resources\templates\premia\saldo.html
+src\main\resources\templates\samochody\form.html
+src\main\resources\templates\samochody\lista.html
+src\main\resources\templates\samochody\szczegoly.html
+src\main\resources\templates\search\form.html
+src\main\resources\templates\search\quick-results.html
+src\main\resources\templates\search\results.html
+src\main\resources\templates\serwis\form.html
+src\main\resources\templates\serwis\lista.html
+src\main\resources\templates\serwis\rezerwacja.html
+src\main\resources\templates\serwis\zakoncz.html
+src\main\resources\templates\serwis\zakonczenie.html
+src\main\resources\templates\zakupy\lista-admin.html
+src\main\resources\templates\zakupy\lista-klient.html
+src\main\resources\templates\zakupy\rabaty.html
+src\main\resources\templates\zakupy\wykorzystaj-saldo.html
 
 ================ PODSUMOWANIE ================
-Przetworzonych plik體: 7
-Pomini阾ych plik體: 0
-B酬d體 odczytu: 0
-Razem plik體 wej渃iowych: 7
-Data zako馽zenia: 12/27/2025 22:03:12
+Foldery: 31
+Pliki: 127
+Razem: 158 element體
+Data zako馽zenia: 12/28/2025 00:32:33

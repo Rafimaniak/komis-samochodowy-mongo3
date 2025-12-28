@@ -39,7 +39,6 @@ public class SamochodService {
 
     @Transactional
     public Samochod save(Samochod samochod) {
-        // GENERUJ NOWE ID JEŚLI NIE MA
         if (samochod.getId() == null || samochod.getId().trim().isEmpty()) {
             samochod.setId(new ObjectId().toString());
         }
@@ -60,10 +59,8 @@ public class SamochodService {
             samochod.setStatus("DOSTEPNY");
         }
 
-        String zdjecieUrl = samochod.getZdjecieUrl();
-        if (zdjecieUrl == null) {
-            zdjecieUrl = "";
-            samochod.setZdjecieUrl(zdjecieUrl);
+        if (samochod.getZdjecieNazwa() != null && samochod.getZdjecieNazwa().trim().isEmpty()) {
+            samochod.setZdjecieNazwa(null);
         }
 
         return samochodRepository.save(samochod);
@@ -118,9 +115,7 @@ public class SamochodService {
             query.addCriteria(new Criteria().andOperator(criteriaList.toArray(new Criteria[0])));
         }
 
-        System.out.println("DEBUG: MongoDB Query: " + query.toString());
         List<Samochod> results = mongoTemplate.find(query, Samochod.class);
-        System.out.println("DEBUG: Found " + results.size() + " cars");
 
         return results;
     }

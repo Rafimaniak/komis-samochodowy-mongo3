@@ -1,78 +1,68 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title th:text="${tytul}">Formularz Samochodu</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${samochod.id != null} ? 'Edytuj samochód' : 'Dodaj samochód'"></title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-        <a class="navbar-brand" href="/">🚗 Komis Samochodowy</a>
-
-        <!-- Dodaj tę sekcję do navbar -->
-        <div class="navbar-nav">
-            <!-- Link Klienci tylko dla admina -->
-            <div sec:authorize="hasRole('ADMIN')">
-                <a class="nav-link" th:href="@{/klienci}">Klienci</a>
-                <a class="nav-link" th:href="@{/pracownicy}">Pracownicy</a>
-            </div>
-        </div>
-
-        <div class="navbar-nav ms-auto">
-            <span class="navbar-text me-3" sec:authentication="name"></span>
-            <a class="nav-link" href="/samochody">Powrót do listy</a>
-            <a class="nav-link" href="#" th:href="@{/logout}">Wyloguj</a>
-        </div>
-    </div>
-</nav>
-
-<div class="container mt-4">
+<div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-10">
             <div class="card">
-                <div class="card-header">
-                    <h4 th:text="${tytul}" class="mb-0">Formularz Samochodu</h4>
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0" th:text="${samochod.id != null} ? 'Edytuj samochód' : 'Dodaj nowy samochód'"></h3>
                 </div>
                 <div class="card-body">
-                    <!-- Formularz dla nowego samochodu -->
-                    <form th:if="${samochod.id == null}" th:action="@{/samochody/zapisz}"
-                          method="post" th:object="${samochod}">
+
+                    <!-- Komunikaty błędów/sukcesów -->
+                    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle"></i>
+                        <span th:utext="${successMessage}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span th:utext="${errorMessage}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <!-- JEDEN formularz dla dodawania i edycji -->
+                    <form th:action="@{/samochody/zapisz}" method="post" th:object="${samochod}" enctype="multipart/form-data">
+                        <input type="hidden" th:field="*{id}">
+                        <input type="hidden" th:field="*{dataDodania}">
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="marka" class="form-label">Marka *</label>
-                                <input type="text" class="form-control" id="marka"
-                                       th:field="*{marka}" required>
+                                <label class="form-label">Marka *</label>
+                                <input type="text" class="form-control" th:field="*{marka}" required>
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <label for="model" class="form-label">Model *</label>
-                                <input type="text" class="form-control" id="model"
-                                       th:field="*{model}" required>
+                                <label class="form-label">Model *</label>
+                                <input type="text" class="form-control" th:field="*{model}" required>
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label for="rokProdukcji" class="form-label">Rok Produkcji *</label>
-                                <input type="number" class="form-control" id="rokProdukcji"
-                                       th:field="*{rokProdukcji}" min="1901" max="2025" required>
+                                <label class="form-label">Rok produkcji *</label>
+                                <input type="number" class="form-control" th:field="*{rokProdukcji}"
+                                       min="1900" max="2030" required>
                             </div>
 
                             <div class="col-md-4 mb-3">
-                                <label for="przebieg" class="form-label">Przebieg (km) *</label>
-                                <input type="number" class="form-control" id="przebieg"
-                                       th:field="*{przebieg}" min="0" required>
+                                <label class="form-label">Przebieg (km) *</label>
+                                <input type="number" class="form-control" th:field="*{przebieg}"
+                                       min="0" required>
                             </div>
 
                             <div class="col-md-4 mb-3">
-                                <label for="cena" class="form-label">Cena (zł) *</label>
+                                <label class="form-label">Cena (zł) *</label>
                                 <div class="input-group">
-                                    <input type="number" step="0.01" class="form-control" id="cena"
+                                    <input type="number" step="0.01" class="form-control"
                                            th:field="*{cena}" min="0" required>
                                     <span class="input-group-text">zł</span>
                                 </div>
@@ -81,23 +71,22 @@
 
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label for="kolor" class="form-label">Kolor</label>
-                                <input type="text" class="form-control" id="kolor"
-                                       th:field="*{kolor}">
+                                <label class="form-label">Kolor</label>
+                                <input type="text" class="form-control" th:field="*{kolor}" placeholder="Np. Czerwony">
                             </div>
 
                             <div class="col-md-4 mb-3">
-                                <label for="pojemnoscSilnika" class="form-label">Pojemność silnika</label>
+                                <label class="form-label">Pojemność silnika</label>
                                 <div class="input-group">
-                                    <input type="number" step="0.1" class="form-control" id="pojemnoscSilnika"
-                                           th:field="*{pojemnoscSilnika}">
+                                    <input type="number" step="0.1" class="form-control"
+                                           th:field="*{pojemnoscSilnika}" min="0.5" max="10.0">
                                     <span class="input-group-text">L</span>
                                 </div>
                             </div>
 
                             <div class="col-md-4 mb-3">
-                                <label for="status" class="form-label">Status *</label>
-                                <select class="form-select" id="status" th:field="*{status}" required>
+                                <label class="form-label">Status *</label>
+                                <select class="form-select" th:field="*{status}" required>
                                     <option value="">Wybierz status</option>
                                     <option value="DOSTEPNY">Dostępny</option>
                                     <option value="SPRZEDANY">Sprzedany</option>
@@ -108,145 +97,83 @@
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="rodzajPaliwa" class="form-label">Rodzaj paliwa</label>
-                                <select class="form-select" id="rodzajPaliwa" th:field="*{rodzajPaliwa}">
+                                <label class="form-label">Rodzaj paliwa</label>
+                                <select class="form-select" th:field="*{rodzajPaliwa}">
                                     <option value="Benzyna">Benzyna</option>
                                     <option value="Diesel">Diesel</option>
                                     <option value="Hybryda">Hybryda</option>
                                     <option value="Elektryczny">Elektryczny</option>
+                                    <option value="LPG">LPG</option>
                                 </select>
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <label for="skrzyniaBiegow" class="form-label">Skrzynia biegów</label>
-                                <select class="form-select" id="skrzyniaBiegow" th:field="*{skrzyniaBiegow}">
+                                <label class="form-label">Skrzynia biegów</label>
+                                <select class="form-select" th:field="*{skrzyniaBiegow}">
                                     <option value="Manualna">Manualna</option>
                                     <option value="Automatyczna">Automatyczna</option>
+                                    <option value="Półautomatyczna">Półautomatyczna</option>
                                 </select>
                             </div>
                         </div>
 
-                        <!-- DODANE: Pole na URL zdjęcia -->
+                        <!-- SEKCJA ZDJĘCIA -->
                         <div class="row">
                             <div class="col-md-12 mb-3">
-                                <label for="zdjecieUrl" class="form-label">URL zdjęcia</label>
-                                <input type="url" class="form-control" id="zdjecieUrl"
-                                       th:field="*{zdjecieUrl}" placeholder="https://example.com/obrazek.jpg">
-                                <div class="form-text">
-                                    Wklej link do zdjęcia samochodu (opcjonalne)
+                                <label class="form-label">Zdjęcie samochodu</label>
+
+                                <!-- Podgląd obecnego zdjęcia (tylko przy edycji) -->
+                                <div th:if="${samochod.id != null and samochod.zdjecieNazwa != null and samochod.zdjecieNazwa != ''}"
+                                     class="mb-3 p-3 border rounded">
+                                    <p class="fw-bold">Aktualne zdjęcie:</p>
+                                    <img th:src="@{${'/images/samochody/' + samochod.zdjecieNazwa}}"
+                                         alt="Zdjęcie samochodu"
+                                         style="max-width: 300px; max-height: 200px; object-fit: cover;"
+                                         class="img-thumbnail mb-2"
+                                         onerror="this.src='/images/samochody/domyslny.jpg'">
+                                    <p class="text-muted small mb-0" th:text="${'Nazwa pliku: ' + samochod.zdjecieNazwa}"></p>
+
+                                    <!-- Checkbox do usunięcia zdjęcia -->
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox"
+                                               name="usunZdjecie" id="usunZdjecie" value="true">
+                                        <label class="form-check-label text-danger" for="usunZdjecie">
+                                            <i class="fas fa-trash me-1"></i> Usuń aktualne zdjęcie
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Pole do uploadu zdjęcia -->
+                                <div class="mb-3">
+                                    <label for="zdjeciePlik" class="form-label">
+                                        <th:block th:if="${samochod.zdjecieNazwa == null or samochod.zdjecieNazwa == ''}">
+                                            Dodaj zdjęcie
+                                        </th:block>
+                                        <th:block th:if="${samochod.zdjecieNazwa != null and samochod.zdjecieNazwa != ''}">
+                                            Zmień zdjęcie (opcjonalne)
+                                        </th:block>
+                                    </label>
+                                    <input type="file" class="form-control" id="zdjeciePlik"
+                                           name="zdjeciePlik" accept="image/*">
+                                    <div class="form-text">
+                                        Wybierz plik ze zdjęciem (JPG, PNG, GIF, WebP). Maksymalny rozmiar: 5MB.
+                                        <span th:if="${samochod.zdjecieNazwa != null and samochod.zdjecieNazwa != ''}">
+                                            Pozostaw puste, aby zachować obecne zdjęcie.
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="/samochody" class="btn btn-secondary me-md-2">Anuluj</a>
-                            <button type="submit" class="btn btn-primary">Zapisz</button>
-                        </div>
-                    </form>
-
-                    <!-- Formularz dla edycji samochodu -->
-                    <form th:if="${samochod.id != null}" th:action="@{/samochody/edytuj(id=${samochod.id})}"
-                          method="post" th:object="${samochod}">
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="marka" class="form-label">Marka *</label>
-                                <input type="text" class="form-control" id="marka"
-                                       th:field="*{marka}" required>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label for="model" class="form-label">Model *</label>
-                                <input type="text" class="form-control" id="model"
-                                       th:field="*{model}" required>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="rokProdukcji" class="form-label">Rok Produkcji *</label>
-                                <input type="number" class="form-control" id="rokProdukcji"
-                                       th:field="*{rokProdukcji}" min="1901" max="2025" required>
-                            </div>
-
-                            <div class="col-md-4 mb-3">
-                                <label for="przebieg" class="form-label">Przebieg (km) *</label>
-                                <input type="number" class="form-control" id="przebieg"
-                                       th:field="*{przebieg}" min="0" required>
-                            </div>
-
-                            <div class="col-md-4 mb-3">
-                                <label for="cena" class="form-label">Cena (zł) *</label>
-                                <div class="input-group">
-                                    <input type="number" step="0.01" class="form-control" id="cena"
-                                           th:field="*{cena}" min="0" required>
-                                    <span class="input-group-text">zł</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="kolor" class="form-label">Kolor</label>
-                                <input type="text" class="form-control" id="kolor"
-                                       th:field="*{kolor}">
-                            </div>
-
-                            <div class="col-md-4 mb-3">
-                                <label for="pojemnoscSilnika" class="form-label">Pojemność silnika</label>
-                                <div class="input-group">
-                                    <input type="number" step="0.1" class="form-control" id="pojemnoscSilnika"
-                                           th:field="*{pojemnoscSilnika}">
-                                    <span class="input-group-text">L</span>
-                                </div>
-                            </div>
-
-                            <div class="col-md-4 mb-3">
-                                <label for="status" class="form-label">Status *</label>
-                                <select class="form-select" id="status" th:field="*{status}" required>
-                                    <option value="">Wybierz status</option>
-                                    <option value="DOSTEPNY">Dostępny</option>
-                                    <option value="SPRZEDANY">Sprzedany</option>
-                                    <option value="ZAREZERWOWANY">Zarezerwowany</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="rodzajPaliwa" class="form-label">Rodzaj paliwa</label>
-                                <select class="form-select" id="rodzajPaliwa" th:field="*{rodzajPaliwa}">
-                                    <option value="Benzyna">Benzyna</option>
-                                    <option value="Diesel">Diesel</option>
-                                    <option value="Hybryda">Hybryda</option>
-                                    <option value="Elektryczny">Elektryczny</option>
-                                </select>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label for="skrzyniaBiegow" class="form-label">Skrzynia biegów</label>
-                                <select class="form-select" id="skrzyniaBiegow" th:field="*{skrzyniaBiegow}">
-                                    <option value="Manualna">Manualna</option>
-                                    <option value="Automatyczna">Automatyczna</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- DODANE: Pole na URL zdjęcia -->
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
-                                <label for="zdjecieUrl" class="form-label">URL zdjęcia</label>
-                                <input type="url" class="form-control" id="zdjecieUrl"
-                                       th:field="*{zdjecieUrl}" placeholder="https://example.com/obrazek.jpg">
-                                <div class="form-text">
-                                    Wklej link do zdjęcia samochodu (opcjonalne)
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="/samochody" class="btn btn-secondary me-md-2">Anuluj</a>
-                            <button type="submit" class="btn btn-primary">Zaktualizuj</button>
+                        <!-- Przyciski akcji -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a th:href="@{/samochody}" class="btn btn-secondary me-md-2">
+                                <i class="fas fa-times me-1"></i> Anuluj
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>
+                                <span th:text="${samochod.id != null} ? 'Zaktualizuj' : 'Zapisz'"></span>
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -256,5 +183,82 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Walidacja przed wysłaniem formularza
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(event) {
+            let isValid = true;
+            const requiredFields = form.querySelectorAll('[required]');
+
+            requiredFields.forEach(function(field) {
+                if (!field.value.trim()) {
+                    isValid = false;
+                    field.classList.add('is-invalid');
+
+                    // Utwórz komunikat błędu jeśli nie istnieje
+                    if (!field.nextElementSibling || !field.nextElementSibling.classList.contains('invalid-feedback')) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'invalid-feedback';
+                        errorDiv.textContent = 'To pole jest wymagane';
+                        field.parentNode.appendChild(errorDiv);
+                    }
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+
+            if (!isValid) {
+                event.preventDefault();
+                alert('Proszę wypełnić wszystkie wymagane pola (oznaczone *).');
+            }
+        });
+
+        // Obsługa usuwania zdjęcia - ukryj pole uploadu jeśli zaznaczono usuwanie
+        const usunCheckbox = document.getElementById('usunZdjecie');
+        const zdjeciePlikInput = document.getElementById('zdjeciePlik');
+
+        if (usunCheckbox && zdjeciePlikInput) {
+            usunCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    zdjeciePlikInput.disabled = true;
+                    zdjeciePlikInput.style.opacity = '0.5';
+                } else {
+                    zdjeciePlikInput.disabled = false;
+                    zdjeciePlikInput.style.opacity = '1';
+                }
+            });
+        }
+
+        // Podgląd wybranego zdjęcia
+        const fileInput = document.getElementById('zdjeciePlik');
+        if (fileInput) {
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        // Znajdź istniejący podgląd lub utwórz nowy
+                        let preview = document.querySelector('.image-preview');
+                        if (!preview) {
+                            preview = document.createElement('div');
+                            preview.className = 'image-preview mt-2';
+                            fileInput.parentNode.appendChild(preview);
+                        }
+
+                        preview.innerHTML = `
+                            <p class="fw-bold mt-2">Podgląd nowego zdjęcia:</p>
+                            <img src="${e.target.result}"
+                                 style="max-width: 300px; max-height: 200px; object-fit: cover;"
+                                 class="img-thumbnail">
+                            <p class="text-muted small mt-1">${file.name} (${(file.size/1024/1024).toFixed(2)} MB)</p>
+                        `;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+    });
+</script>
 </body>
 </html>

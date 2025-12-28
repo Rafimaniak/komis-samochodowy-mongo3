@@ -29,14 +29,12 @@ public class MongoDataMigrator implements CommandLineRunner {
     public void run(String... args) {
         System.out.println("=== SPRAWDZANIE BAZY DANYCH ===");
 
-        // Tylko sprawdź czy dane istnieją, nie importuj ponownie
         long samochodyCount = samochodRepository.count();
         long klienciCount = klientRepository.count();
 
         System.out.println("Liczba samochodów w bazie: " + samochodyCount);
         System.out.println("Liczba klientów w bazie: " + klienciCount);
 
-        // Jeśli brak danych, dodaj przykładowe
         if (samochodyCount == 0) {
             addSampleCars();
         }
@@ -66,7 +64,8 @@ public class MongoDataMigrator implements CommandLineRunner {
         s1.setCena(new BigDecimal("120000"));
         s1.setStatus("DOSTEPNY");
         s1.setDataDodania(LocalDate.now());
-        s1.setZdjecieUrl("https://example.com/bmw.jpg");
+        // POPRAWIONE: używamy setZdjecieNazwa zamiast setZdjecieUrl
+        s1.setZdjecieNazwa(null);
         samochody.add(s1);
 
         // Samochód 2
@@ -82,7 +81,7 @@ public class MongoDataMigrator implements CommandLineRunner {
         s2.setCena(new BigDecimal("95000"));
         s2.setStatus("DOSTEPNY");
         s2.setDataDodania(LocalDate.now());
-        s2.setZdjecieUrl("https://example.com/audi.jpg");
+        s2.setZdjecieNazwa(null);
         samochody.add(s2);
 
         // Samochód 3
@@ -98,7 +97,7 @@ public class MongoDataMigrator implements CommandLineRunner {
         s3.setCena(new BigDecimal("75000"));
         s3.setStatus("DOSTEPNY");
         s3.setDataDodania(LocalDate.now());
-        s3.setZdjecieUrl("https://example.com/toyota.jpg");
+        s3.setZdjecieNazwa(null);
         samochody.add(s3);
 
         samochodRepository.saveAll(samochody);

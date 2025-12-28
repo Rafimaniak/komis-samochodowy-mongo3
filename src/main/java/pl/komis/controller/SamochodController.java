@@ -6,14 +6,20 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.komis.model.*;
 import pl.komis.service.*;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Controller
 @RequestMapping("/samochody")
@@ -26,68 +32,50 @@ public class SamochodController {
     private final PracownikService pracownikService;
     private final ZakupService zakupService;
 
+    // Ścieżka do katalogu ze zdjęciami
+    private static final String UPLOAD_DIR = "src/main/resources/static/images/samochody/";
+
     // Widok listy samochodów z wyszukiwarką
     @GetMapping
     public String listaSamochodow(
             @RequestParam(required = false) String marka,
             @RequestParam(required = false) String model,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) Integer minRok,
-            @RequestParam(required = false) Integer maxRok,
-            @RequestParam(required = false) Integer minPrzebieg,
-            @RequestParam(required = false) Integer maxPrzebieg,
-            @RequestParam(required = false) BigDecimal minCena,
-            @RequestParam(required = false) BigDecimal maxCena,
-            Model modelAttr) {
+            Model modelAttribute) {
 
         List<Samochod> samochody;
 
-        // Sprawdź czy są parametry wyszukiwania (uwzględniając puste stringi)
-        boolean hasSearchParams = (marka != null && !marka.trim().isEmpty()) ||
-                (model != null && !model.trim().isEmpty()) ||
-                (status != null && !status.trim().isEmpty()) ||
-                minRok != null || maxRok != null ||
-                minPrzebieg != null || maxPrzebieg != null ||
-                minCena != null || maxCena != null;
-
-        if (hasSearchParams) {
-            // Użyj zaawansowanego wyszukiwania
-            SamochodService.SearchCriteria criteria = new SamochodService.SearchCriteria();
-            criteria.setMarka(marka);
-            criteria.setModel(model);
-            criteria.setStatus(status);
-            criteria.setMinRok(minRok);
-            criteria.setMaxRok(maxRok);
-            criteria.setMinPrzebieg(minPrzebieg);
-            criteria.setMaxPrzebieg(maxPrzebieg);
-            criteria.setMinCena(minCena);
-            criteria.setMaxCena(maxCena);
-
-            samochody = samochodService.searchCars(criteria);
-
-            // DEBUG: Sprawdź wyniki wyszukiwania
-            System.out.println("DEBUG: Kryteria wyszukiwania: " + criteria);
-            System.out.println("DEBUG: Znaleziono samochodów: " + samochody.size());
+        if ((marka != null && !marka.isEmpty()) ||
+                (model != null && !model.isEmpty()) ||
+                (status != null && !status.isEmpty())) {
+            samochody = samochodService.searchCarsSimple(marka, model, status);
         } else {
-            // Pokaż wszystkie samochody
             samochody = samochodService.findAll();
         }
 
-        modelAttr.addAttribute("samochody", samochody);
-        modelAttr.addAttribute("marki", samochodService.findAllMarki());
-        modelAttr.addAttribute("tytul", "Lista Samochodów");
-        modelAttr.addAttribute("hasSearchParams", hasSearchParams);
+        long dostepne = samochody.stream()
+                .filter(s -> "DOSTEPNY".equals(s.getStatus()))
+                .count();
+        long zarezerwowane = samochody.stream()
+                .filter(s -> "ZAREZERWOWANY".equals(s.getStatus()))
+                .count();
+        long sprzedane = samochody.stream()
+                .filter(s -> "SPRZEDANY".equals(s.getStatus()))
+                .count();
 
-        // Przekaż parametry wyszukiwania z powrotem do formularza
-        modelAttr.addAttribute("searchMarka", marka);
-        modelAttr.addAttribute("searchModel", model);
-        modelAttr.addAttribute("searchStatus", status);
-        modelAttr.addAttribute("searchMinRok", minRok);
-        modelAttr.addAttribute("searchMaxRok", maxRok);
-        modelAttr.addAttribute("searchMinPrzebieg", minPrzebieg);
-        modelAttr.addAttribute("searchMaxPrzebieg", maxPrzebieg);
-        modelAttr.addAttribute("searchMinCena", minCena);
-        modelAttr.addAttribute("searchMaxCena", maxCena);
+        modelAttribute.addAttribute("samochody", samochody);
+        modelAttribute.addAttribute("marki", samochodService.findAllMarki());
+        modelAttribute.addAttribute("searchMarka", marka);
+        modelAttribute.addAttribute("searchModel", model);
+        modelAttribute.addAttribute("searchStatus", status);
+        modelAttribute.addAttribute("hasSearchParams",
+                (marka != null && !marka.isEmpty()) ||
+                        (model != null && !model.isEmpty()) ||
+                        (status != null && !status.isEmpty()));
+
+        modelAttribute.addAttribute("dostepneCount", dostepne);
+        modelAttribute.addAttribute("zarezerwowaneCount", zarezerwowane);
+        modelAttribute.addAttribute("sprzedaneCount", sprzedane);
 
         return "samochody/lista";
     }
@@ -173,22 +161,53 @@ public class SamochodController {
     // Zapisywanie nowego samochodu - tylko ADMIN
     @PostMapping("/zapisz")
     @PreAuthorize("hasRole('ADMIN')")
-    public String zapiszSamochod(@ModelAttribute Samochod samochod) {
-        // Ustaw domyślne wartości dla brakujących pól
-        if (samochod.getDataDodania() == null) {
-            samochod.setDataDodania(LocalDate.now());
-        }
-        if (samochod.getRodzajPaliwa() == null) {
-            samochod.setRodzajPaliwa("Benzyna");
-        }
-        if (samochod.getSkrzyniaBiegow() == null) {
-            samochod.setSkrzyniaBiegow("Manualna");
-        }
-        if (samochod.getPojemnoscSilnika() == null) {
-            samochod.setPojemnoscSilnika(2.0);
+    public String zapiszSamochod(@ModelAttribute Samochod samochod,
+                                 @RequestParam(value = "zdjeciePlik", required = false) MultipartFile zdjeciePlik,
+                                 RedirectAttributes redirectAttributes) {
+        try {
+            // Obsługa uploadu zdjęcia
+            if (zdjeciePlik != null && !zdjeciePlik.isEmpty()) {
+                // Utwórz katalog jeśli nie istnieje
+                Path uploadPath = Paths.get(UPLOAD_DIR);
+                if (!Files.exists(uploadPath)) {
+                    Files.createDirectories(uploadPath);
+                }
+
+                // Generuj unikalną nazwę pliku
+                String originalFileName = zdjeciePlik.getOriginalFilename();
+                String fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
+                String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
+
+                // Zapisz plik
+                Path filePath = uploadPath.resolve(uniqueFileName);
+                Files.copy(zdjeciePlik.getInputStream(), filePath);
+
+                // Ustaw nazwę pliku w modelu
+                samochod.setZdjecieNazwa(uniqueFileName);
+            }
+
+            // Ustaw domyślne wartości dla brakujących pól
+            if (samochod.getDataDodania() == null) {
+                samochod.setDataDodania(LocalDate.now());
+            }
+            if (samochod.getRodzajPaliwa() == null) {
+                samochod.setRodzajPaliwa("Benzyna");
+            }
+            if (samochod.getSkrzyniaBiegow() == null) {
+                samochod.setSkrzyniaBiegow("Manualna");
+            }
+            if (samochod.getPojemnoscSilnika() == null) {
+                samochod.setPojemnoscSilnika(2.0);
+            }
+
+            samochodService.save(samochod);
+            redirectAttributes.addFlashAttribute("successMessage", "Samochód zapisany pomyślnie");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Błąd: " + e.getMessage());
+            e.printStackTrace();
+            return "redirect:/samochody/nowy";
         }
 
-        samochodService.save(samochod);
         return "redirect:/samochody";
     }
 
@@ -206,22 +225,116 @@ public class SamochodController {
     // Aktualizacja samochodu - tylko ADMIN
     @PostMapping("/edytuj")
     @PreAuthorize("hasRole('ADMIN')")
-    public String aktualizujSamochod(@RequestParam("id") String id, @ModelAttribute Samochod samochod) {
-        samochod.setId(id);
-        samochodService.save(samochod);
+    public String aktualizujSamochod(@ModelAttribute Samochod samochod,
+                                     @RequestParam("id") String id,
+                                     @RequestParam(value = "zdjeciePlik", required = false) MultipartFile zdjeciePlik,
+                                     @RequestParam(value = "usunZdjecie", required = false, defaultValue = "false") boolean usunZdjecie,
+                                     RedirectAttributes redirectAttributes) {
+        try {
+            // Pobierz stary samochód do zachowania danych
+            Samochod starySamochod = samochodService.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
+
+            // Obsługa zdjęcia
+            if (usunZdjecie) {
+                // Usuń zdjęcie
+                samochod.setZdjecieNazwa(null);
+                // Usuń plik z dysku jeśli istnieje
+                if (starySamochod.getZdjecieNazwa() != null) {
+                    try {
+                        Path filePath = Paths.get(UPLOAD_DIR + starySamochod.getZdjecieNazwa());
+                        Files.deleteIfExists(filePath);
+                    } catch (IOException e) {
+                        System.err.println("Błąd usuwania pliku: " + e.getMessage());
+                    }
+                }
+            } else if (zdjeciePlik != null && !zdjeciePlik.isEmpty()) {
+                // Nowe zdjęcie
+                // Utwórz katalog jeśli nie istnieje
+                Path uploadPath = Paths.get(UPLOAD_DIR);
+                if (!Files.exists(uploadPath)) {
+                    Files.createDirectories(uploadPath);
+                }
+
+                // Generuj unikalną nazwę pliku
+                String originalFileName = zdjeciePlik.getOriginalFilename();
+                String fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
+                String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
+
+                // Zapisz nowy plik
+                Path filePath = uploadPath.resolve(uniqueFileName);
+                Files.copy(zdjeciePlik.getInputStream(), filePath);
+
+                // Usuń stary plik jeśli istnieje
+                if (starySamochod.getZdjecieNazwa() != null) {
+                    Path oldFilePath = Paths.get(UPLOAD_DIR + starySamochod.getZdjecieNazwa());
+                    Files.deleteIfExists(oldFilePath);
+                }
+
+                // Ustaw nową nazwę pliku
+                samochod.setZdjecieNazwa(uniqueFileName);
+            } else {
+                // Zachowaj stare zdjęcie jeśli nie przysłano nowego
+                samochod.setZdjecieNazwa(starySamochod.getZdjecieNazwa());
+            }
+
+            // Zachowaj datę dodania
+            samochod.setDataDodania(starySamochod.getDataDodania());
+
+            // Ustaw ID
+            samochod.setId(id);
+
+            // Ustaw domyślne wartości jeśli null
+            if (samochod.getRodzajPaliwa() == null) {
+                samochod.setRodzajPaliwa("Benzyna");
+            }
+            if (samochod.getSkrzyniaBiegow() == null) {
+                samochod.setSkrzyniaBiegow("Manualna");
+            }
+            if (samochod.getPojemnoscSilnika() == null) {
+                samochod.setPojemnoscSilnika(2.0);
+            }
+
+            samochodService.save(samochod);
+            redirectAttributes.addFlashAttribute("successMessage", "Samochód zaktualizowany pomyślnie");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Błąd: " + e.getMessage());
+            e.printStackTrace();
+            return "redirect:/samochody/edytuj?id=" + id;
+        }
+
         return "redirect:/samochody";
     }
 
     // Usuwanie samochodu - tylko ADMIN
     @PostMapping("/usun")
     @PreAuthorize("hasRole('ADMIN')")
-    public String usunSamochod(@RequestParam("id") String id) {
-        samochodService.delete(id);
+    public String usunSamochod(@RequestParam("id") String id, RedirectAttributes redirectAttributes) {
+        try {
+            // Pobierz samochód przed usunięciem, aby usunąć zdjęcie
+            Samochod samochod = samochodService.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
+
+            // Usuń zdjęcie z dysku jeśli istnieje
+            if (samochod.getZdjecieNazwa() != null) {
+                try {
+                    Path filePath = Paths.get(UPLOAD_DIR + samochod.getZdjecieNazwa());
+                    Files.deleteIfExists(filePath);
+                } catch (IOException e) {
+                    System.err.println("Błąd usuwania pliku zdjęcia: " + e.getMessage());
+                }
+            }
+
+            // Usuń samochód z bazy
+            samochodService.delete(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Samochód usunięty pomyślnie");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Błąd: " + e.getMessage());
+        }
         return "redirect:/samochody";
     }
 
     // Rezerwacja samochodu - dla zalogowanych użytkowników
-    // Poprawiona metoda rezerwacji
     @PostMapping("/zarezerwuj")
     @PreAuthorize("isAuthenticated()")
     public String zarezerwujSamochod(@RequestParam("id") String id,

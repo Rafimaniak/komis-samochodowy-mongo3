@@ -18,34 +18,59 @@
             background-color: #343a40 !important;
         }
 
+        .car-image {
+            width: 100px;
+            height: 75px;
+            object-fit: cover;
+            border-radius: 5px;
+            transition: transform 0.2s;
+        }
+        .car-image:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .no-image {
+            width: 100px;
+            height: 75px;
+            background-color: #f8f9fa;
+            border: 1px dashed #dee2e6;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+        }
+
         .table-responsive {
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        .admin-actions {
-            margin-bottom: 20px;
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.05);
+        }
+
+        .badge {
+            font-size: 0.8em;
+            padding: 0.4em 0.8em;
         }
     </style>
 </head>
 <body>
 
-<!-- Fixed Navigation -->
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top navbar-custom">
     <div class="container-fluid">
         <a class="navbar-brand" href="/">
             <i class="fas fa-car"></i> Komis Samochodowy
         </a>
 
-        <!-- Przycisk hamburger menu dla mobilnych -->
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <!-- Menu główne -->
         <div class="collapse navbar-collapse" id="navbarNav">
-            <!-- Menu dla admina -->
             <ul class="navbar-nav" sec:authorize="hasRole('ADMIN')">
                 <li class="nav-item">
                     <a class="nav-link" href="/admin"><i class="fas fa-tachometer-alt"></i> Panel Admina</a>
@@ -73,7 +98,6 @@
                 </li>
             </ul>
 
-            <!-- Menu dla zalogowanych użytkowników (nie adminów) -->
             <ul class="navbar-nav" sec:authorize="isAuthenticated()" sec:authorize-expr="!hasRole('ADMIN')">
                 <li class="nav-item">
                     <a class="nav-link active" href="/samochody"><i class="fas fa-car"></i> Samochody</a>
@@ -86,7 +110,6 @@
                 </li>
             </ul>
 
-            <!-- Menu dla niezalogowanych -->
             <ul class="navbar-nav" sec:authorize="!isAuthenticated()">
                 <li class="nav-item">
                     <a class="nav-link active" href="/samochody"><i class="fas fa-car"></i> Samochody</a>
@@ -96,7 +119,6 @@
                 </li>
             </ul>
 
-            <!-- Informacje o użytkowniku i wylogowanie (dla zalogowanych) -->
             <ul class="navbar-nav ms-auto" sec:authorize="isAuthenticated()">
                 <li class="nav-item">
                     <span class="navbar-text me-3">
@@ -110,7 +132,6 @@
                 </li>
             </ul>
 
-            <!-- Logowanie i rejestracja (dla niezalogowanych) -->
             <ul class="navbar-nav ms-auto" sec:authorize="!isAuthenticated()">
                 <li class="nav-item">
                     <a class="nav-link" href="/login"><i class="fas fa-sign-in-alt"></i> Zaloguj</a>
@@ -126,12 +147,111 @@
 <div class="container mt-3">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1><i class="fas fa-car"></i> Lista Samochodów</h1>
-
-        <!-- Przyciski admina -->
-        <div sec:authorize="hasRole('ADMIN')" class="admin-actions">
-            <a href="/samochody/nowy" class="btn btn-success">
-                <i class="fas fa-plus"></i> Dodaj samochód
+        <div>
+            <a href="/" class="btn btn-secondary">
+                <i class="fas fa-home"></i> Strona Główna
             </a>
+            <a sec:authorize="hasRole('ADMIN')" href="/samochody/nowy" class="btn btn-success ms-2">
+                <i class="fas fa-plus"></i> Dodaj Samochód
+            </a>
+        </div>
+    </div>
+
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle"></i>
+        <span th:utext="${successMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span th:utext="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-search me-2"></i>Szybkie wyszukiwanie</h5>
+        </div>
+        <div class="card-body">
+            <form th:action="@{/samochody}" method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Marka</label>
+                    <select class="form-select" name="marka">
+                        <option value="">Wybierz markę</option>
+                        <option th:each="marka : ${marki}"
+                                th:value="${marka}"
+                                th:selected="${searchMarka == marka}"
+                                th:text="${marka}"></option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Model</label>
+                    <input type="text" class="form-control" name="model"
+                           th:value="${searchModel}" placeholder="Wpisz model">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="status">
+                        <option value="">Dowolny status</option>
+                        <option value="DOSTEPNY" th:selected="${searchStatus == 'DOSTEPNY'}">Dostępny</option>
+                        <option value="ZAREZERWOWANY" th:selected="${searchStatus == 'ZAREZERWOWANY'}">Zarezerwowany</option>
+                        <option value="SPRZEDANY" th:selected="${searchStatus == 'SPRZEDANY'}">Sprzedany</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-1"></i> Szukaj
+                    </button>
+                    <a href="/samochody" class="btn btn-secondary ms-2">
+                        <i class="fas fa-times me-1"></i> Wyczyść
+                    </a>
+                    <a href="/search" class="btn btn-outline-primary ms-2">
+                        <i class="fas fa-sliders-h me-1"></i> Zaawansowane wyszukiwanie
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Statystyki - POPRAWIONE: użycie atrybutów z kontrolera -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body text-center">
+                    <h5 class="card-title"><i class="fas fa-car"></i> Wszystkie</h5>
+                    <p class="card-text display-6" th:text="${samochody.size()}">0</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body text-center">
+                    <h5 class="card-title"><i class="fas fa-check-circle"></i> Dostępne</h5>
+                    <p class="card-text display-6">
+                        <span th:text="${dostepneCount}">0</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body text-center">
+                    <h5 class="card-title"><i class="fas fa-clock"></i> Zarezerwowane</h5>
+                    <p class="card-text display-6">
+                        <span th:text="${zarezerwowaneCount}">0</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger">
+                <div class="card-body text-center">
+                    <h5 class="card-title"><i class="fas fa-tag"></i> Sprzedane</h5>
+                    <p class="card-text display-6">
+                        <span th:text="${sprzedaneCount}">0</span>
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -139,51 +259,85 @@
         <table class="table table-striped table-hover">
             <thead class="table-dark">
             <tr>
-                <th>ID</th>
+                <th>Zdjęcie</th>
                 <th>Marka</th>
                 <th>Model</th>
                 <th>Rok</th>
                 <th>Cena</th>
-                <th>Kolor</th>
                 <th>Przebieg</th>
                 <th>Status</th>
-                <th sec:authorize="hasRole('ADMIN')">Akcje</th>
+                <th>Akcje</th>
             </tr>
             </thead>
             <tbody>
             <tr th:each="samochod : ${samochody}">
-                <td th:text="${samochod.id}"></td>
+                <td>
+                    <div th:if="${samochod.zdjecieNazwa != null and samochod.zdjecieNazwa != ''}">
+                        <img th:src="@{${'/images/samochody/' + samochod.zdjecieNazwa}}"
+                             alt="Zdjęcie samochodu"
+                             class="car-image"
+                             data-bs-toggle="tooltip"
+                             th:attr="data-bs-title=${samochod.marka + ' ' + samochod.model}"
+                             onerror="this.src='/images/samochody/domyslny.jpg'">
+                    </div>
+                    <div th:if="${samochod.zdjecieNazwa == null or samochod.zdjecieNazwa == ''}" class="no-image">
+                        <i class="fas fa-car"
+                           data-bs-toggle="tooltip"
+                           th:attr="data-bs-title=${'Brak zdjęcia - ' + samochod.marka + ' ' + samochod.model}"></i>
+                    </div>
+                </td>
                 <td th:text="${samochod.marka}"></td>
                 <td th:text="${samochod.model}"></td>
                 <td th:text="${samochod.rokProdukcji}"></td>
-                <td th:text="${samochod.cena + ' zł'}"></td>
-                <td th:text="${samochod.kolor}"></td>
-                <td th:text="${samochod.przebieg + ' km'}"></td>
+                <td>
+                    <strong th:text="${#numbers.formatDecimal(samochod.cena, 0, 'COMMA', 2, 'POINT') + ' zł'}"></strong>
+                </td>
+                <td th:text="${#numbers.formatInteger(samochod.przebieg, 0, 'COMMA') + ' km'}"></td>
                 <td>
                     <span th:if="${samochod.status == 'DOSTEPNY'}"
-                          class="badge bg-success" th:text="${samochod.status}"></span>
+                          class="badge bg-success"
+                          data-bs-toggle="tooltip"
+                          title="Możliwy do zakupu">
+                          <i class="fas fa-check-circle me-1"></i> Dostępny
+                    </span>
                     <span th:if="${samochod.status == 'SPRZEDANY'}"
-                          class="badge bg-danger" th:text="${samochod.status}"></span>
-                    <span th:if="${samochod.status == 'W_SERWISIE'}"
-                          class="badge bg-warning" th:text="${samochod.status}"></span>
+                          class="badge bg-danger"
+                          data-bs-toggle="tooltip"
+                          title="Już sprzedany">
+                          <i class="fas fa-tag me-1"></i> Sprzedany
+                    </span>
+                    <span th:if="${samochod.status == 'ZAREZERWOWANY'}"
+                          class="badge bg-warning text-dark"
+                          data-bs-toggle="tooltip"
+                          title="Zarezerwowany - oczekuje na zakup">
+                          <i class="fas fa-clock me-1"></i> Zarezerwowany
+                    </span>
                 </td>
-                <td sec:authorize="hasRole('ADMIN')">
-                    <div class="btn-group btn-group-sm" role="group">
-                        <a th:href="@{/samochody/edytuj/{id}(id=${samochod.id})}"
-                           class="btn btn-outline-primary" title="Edytuj">
-                            <i class="fas fa-edit"></i>
+                <td>
+                    <div class="btn-group-vertical btn-group-sm">
+                        <a th:href="@{/samochody/szczegoly(id=${samochod.id})}"
+                           class="btn btn-outline-primary mb-1"
+                           data-bs-toggle="tooltip"
+                           title="Zobacz szczegóły samochodu">
+                            <i class="fas fa-eye me-1"></i> Szczegóły
                         </a>
-                        <a th:href="@{/samochody/szczegoly/{id}(id=${samochod.id})}"
-                           class="btn btn-outline-info" title="Szczegóły">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <form th:action="@{/samochody/usun/{id}(id=${samochod.id})}"
-                              method="post" style="display: inline;"
-                              onsubmit="return confirm('Czy na pewno chcesz usunąć ten samochód?')">
-                            <button type="submit" class="btn btn-outline-danger" title="Usuń">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </form>
+                        <div sec:authorize="hasRole('ADMIN')">
+                            <a th:href="@{/samochody/edytuj(id=${samochod.id})}"
+                               class="btn btn-outline-warning mb-1"
+                               data-bs-toggle="tooltip"
+                               title="Edytuj dane samochodu">
+                                <i class="fas fa-edit me-1"></i> Edytuj
+                            </a>
+                            <form th:action="@{/samochody/usun(id=${samochod.id})}" method="post"
+                                  onsubmit="return confirm('Czy na pewno chcesz usunąć samochód ' + '[[${samochod.marka}]]' + ' ' + '[[${samochod.model}]]' + '?')">
+                                <button type="submit"
+                                        class="btn btn-outline-danger w-100"
+                                        data-bs-toggle="tooltip"
+                                        title="Usuń samochód z bazy">
+                                    <i class="fas fa-trash me-1"></i> Usuń
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </td>
             </tr>
@@ -191,14 +345,33 @@
         </table>
     </div>
 
-    <!-- Przycisk powrotu dla wszystkich -->
-    <div class="mt-3">
-        <a href="/" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Powrót do strony głównej
-        </a>
+    <div th:if="${samochody.empty}" class="alert alert-info text-center">
+        <i class="fas fa-car fa-2x mb-3"></i><br>
+        <span th:if="${hasSearchParams}">Nie znaleziono samochodów spełniających podane kryteria.</span>
+        <span th:if="${not hasSearchParams}">Brak samochodów w bazie danych.</span>
+        <div class="mt-3" sec:authorize="hasRole('ADMIN')">
+            <a href="/samochody/nowy" class="btn btn-success">
+                <i class="fas fa-plus"></i> Dodaj pierwszy samochód
+            </a>
+        </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+
+        document.querySelectorAll('img.car-image').forEach(function(img) {
+            img.onerror = function() {
+                this.src = '/images/samochody/domyslny.jpg';
+                this.onerror = null;
+            };
+        });
+    });
+</script>
 </body>
 </html>
