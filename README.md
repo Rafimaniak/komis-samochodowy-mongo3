@@ -5,7 +5,7 @@ Aplikacja webowa komisu samochodowego napisana w Spring Boot.
 ## Technologie:
 - Java 21
 - Spring Boot 3.3.0
-- PostgreSQL
+- MongoDB
 - Thymeleaf
 - Bootstrap 5
 
