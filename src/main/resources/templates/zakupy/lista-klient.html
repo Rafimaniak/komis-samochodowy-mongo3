@@ -88,7 +88,9 @@
     <!-- Panel salda premii -->
     <div th:if="${klient}" class="card mb-4 shadow">
         <div class="card-header bg-dark text-white">
-            <h5 class="mb-0"><i class="fas fa-wallet"></i> Moje konto premii</h5>
+            <h5 class="mb-0"><i class="fas fa-wallet"></i>
+                <span th:text="'Konto premii - ' + ${klient.imie} + ' ' + ${klient.nazwisko}"></span>
+            </h5>
         </div>
         <div class="card-body">
             <div class="row">

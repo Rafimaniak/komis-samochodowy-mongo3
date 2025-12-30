@@ -26,4 +26,8 @@ public interface UserRepository extends MongoRepository<User, String> {
 
     @Query("{'enabled': false}")
     List<User> findInactiveUsers();
+
+    // POPRAWIONE: Zmień na właściwe zapytanie dla @DBRef
+    @Query("{'klient.$id': ?0}")
+    List<User> findByKlientId(String klientId);
 }

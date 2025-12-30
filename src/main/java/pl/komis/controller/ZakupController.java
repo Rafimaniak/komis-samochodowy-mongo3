@@ -12,7 +12,10 @@ import pl.komis.service.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/zakupy")
@@ -232,21 +235,47 @@ public class ZakupController {
             User user = userService.findByUsername(username)
                     .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
 
-            List<Zakup> zakupy = List.of();
+            List<Zakup> zakupy = new ArrayList<>();
             Klient klient = null;
 
+            // ZAWSZE upewnij się że użytkownik ma klienta
             klient = userService.ensureUserHasKlient(user.getId());
 
-            // UŻYJ NOWEJ METODY Z REFERENCJAMI
-            String klientId = klient.getId(); // UWAGA: To musi być String, nie Long!
-            // ZMIANA: Użyj klient.getId() który jest String w MongoDB
-            String klientIdStr = klient.getId();
-            zakupy = zakupService.findZakupyKlientaZReferencjami(klientIdStr);
+            if (klient == null) {
+                throw new RuntimeException("Nie można utworzyć/pobrać klienta");
+            }
 
-            // Reszta kodu pozostaje bez zmian...
+            // Pobierz zakupy tylko jeśli klient istnieje
+            zakupy = zakupService.findByKlientId(klient.getId());
+
+            System.out.println("DEBUG: Dla klienta ID: " + klient.getId() +
+                    " znaleziono " + zakupy.size() + " zakupów");
+
+            // Oblicz statystyki
+            BigDecimal sumaCenaBazowa = zakupy.stream()
+                    .map(z -> z.getCenaBazowa() != null ? z.getCenaBazowa() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal sumaWykorzystaneSaldo = zakupy.stream()
+                    .map(z -> z.getWykorzystaneSaldo() != null ? z.getWykorzystaneSaldo() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal sumaNaliczonaPremia = zakupy.stream()
+                    .map(z -> z.getNaliczonaPremia() != null ? z.getNaliczonaPremia() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal sumaCenaZakupu = zakupy.stream()
+                    .map(z -> z.getCenaZakupu() != null ? z.getCenaZakupu() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
             model.addAttribute("zakupy", zakupy);
             model.addAttribute("klient", klient);
+            model.addAttribute("sumaCenaBazowa", sumaCenaBazowa);
+            model.addAttribute("sumaWykorzystaneSaldo", sumaWykorzystaneSaldo);
+            model.addAttribute("sumaNaliczonaPremia", sumaNaliczonaPremia);
+            model.addAttribute("sumaCenaZakupu", sumaCenaZakupu);
             model.addAttribute("tytul", "Moje Zakupy");
+
             return "zakupy/lista-klient";
 
         } catch (Exception e) {
@@ -348,5 +377,38 @@ public class ZakupController {
                     "Błąd podczas usuwania zakupu: " + e.getMessage());
         }
         return "redirect:/zakupy";
+    }
+    // Dodaj tę metodę do debugowania
+    @GetMapping("/debug")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String debugZakupy(Model model) {
+        try {
+            // Pobierz wszystkich klientów
+            List<Klient> klienci = klientService.findAll();
+
+            // Dla każdego klienta sprawdź zakupy
+            Map<String, Object> debugInfo = new HashMap<>();
+            for (Klient klient : klienci) {
+                List<Zakup> zakupy = zakupService.findByKlientId(klient.getId());
+
+                Map<String, Object> klientInfo = new HashMap<>();
+                klientInfo.put("klient", klient);
+                klientInfo.put("liczbaZakupow", zakupy.size());
+                klientInfo.put("zakupy", zakupy);
+
+                debugInfo.put(klient.getId(), klientInfo);
+            }
+
+            model.addAttribute("debugInfo", debugInfo);
+            model.addAttribute("totalClients", klienci.size());
+
+            return "admin/debug-zakupy";
+
+        } catch (Exception e) {
+            System.err.println("Błąd w debugZakupy: " + e.getMessage());
+            e.printStackTrace();
+            model.addAttribute("errorMessage", "Błąd debugowania: " + e.getMessage());
+            return "error";
+        }
     }
 }

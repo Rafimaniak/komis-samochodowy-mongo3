@@ -158,10 +158,13 @@
                                     <div class="form-text">
                                         Wybierz plik ze zdjęciem (JPG, PNG, GIF, WebP). Maksymalny rozmiar: 5MB.
                                         <span th:if="${samochod.zdjecieNazwa != null and samochod.zdjecieNazwa != ''}">
-                                            Pozostaw puste, aby zachować obecne zdjęcie.
-                                        </span>
+            Pozostaw puste, aby zachować obecne zdjęcie.
+        </span>
                                     </div>
                                 </div>
+
+                                <!-- UKRYTE POLE NA NAZWĘ ZDJĘCIA - musi być przed przyciskami akcji -->
+                                <input type="hidden" th:field="*{zdjecieNazwa}">
                             </div>
                         </div>
 

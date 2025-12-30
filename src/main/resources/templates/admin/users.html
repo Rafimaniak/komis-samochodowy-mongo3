@@ -25,10 +25,14 @@
         }
 
         .actions-column {
-            width: 250px;
+            width: 280px;
         }
         .status-badge {
             font-size: 0.8em;
+        }
+        .role-select {
+            max-width: 120px;
+            font-size: 0.8rem;
         }
     </style>
 </head>
@@ -162,6 +166,7 @@
                             <small th:text="${#temporals.format(user.createdAt, 'dd.MM.yyyy HH:mm')}"></small>
                         </td>
                         <td>
+                            <!-- Główne przyciski akcji -->
                             <div class="btn-group btn-group-sm" role="group">
                                 <!-- Edycja -->
                                 <a th:href="@{/admin/users/edit/{id}(id=${user.id})}"
@@ -176,7 +181,7 @@
                                 </a>
 
                                 <!-- Aktywacja/Dezaktywacja -->
-                                <form th:action="@{/admin/users/toggle-status/{id}(id=${user.id})}"
+                                <form th:action="@{/admin/users/{id}/toggle(id=${user.id})}"
                                       method="post" style="display: inline;">
                                     <button type="submit"
                                             th:classappend="${user.enabled} ? 'btn-outline-warning' : 'btn-outline-success'"
@@ -188,12 +193,25 @@
                                 </form>
 
                                 <!-- Usuwanie -->
-                                <form th:action="@{/admin/users/delete/{id}(id=${user.id})}"
+                                <form th:action="@{/admin/users/{id}/delete(id=${user.id})}"
                                       method="post" style="display: inline;"
                                       onsubmit="return confirm('Czy na pewno chcesz usunąć użytkownika ' + [[${user.username}]] + '?')">
                                     <button type="submit" class="btn btn-outline-danger" title="Usuń">
                                         <i class="fas fa-trash"></i>
                                     </button>
+                                </form>
+                            </div>
+
+                            <!-- Szybka zmiana roli -->
+                            <div class="mt-2">
+                                <form th:action="@{/admin/users/{id}/change-role(id=${user.id})}"
+                                      method="post" class="d-flex align-items-center">
+                                    <select name="newRole" class="form-select form-select-sm role-select"
+                                            onchange="if(this.value) { if(confirm('Czy na pewno chcesz zmienić rolę użytkownika [[${user.username}]] na ' + this.value + '?')) { this.form.submit(); } else { this.value='[[${user.role}]]'; } }">
+                                        <option th:value="${user.role}" th:text="${user.role}" selected></option>
+                                        <option th:if="${user.role != 'USER'}" value="USER">USER</option>
+                                        <option th:if="${user.role != 'ADMIN'}" value="ADMIN">ADMIN</option>
+                                    </select>
                                 </form>
                             </div>
                         </td>
@@ -212,5 +230,25 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Potwierdzenie przed zmianą roli
+    document.addEventListener('DOMContentLoaded', function() {
+        const roleSelects = document.querySelectorAll('.role-select');
+        roleSelects.forEach(select => {
+            select.addEventListener('change', function() {
+                if (this.value && !confirm('Czy na pewno chcesz zmienić rolę użytkownika?')) {
+                    // Reset do poprzedniej wartości
+                    const event = new Event('change', { bubbles: true });
+                    this.dispatchEvent(event);
+                }
+            });
+        });
+
+        // Pobierz początkową wartość dla każdego selecta
+        roleSelects.forEach(select => {
+            select.dataset.originalValue = select.value;
+        });
+    });
+</script>
 </body>
 </html>

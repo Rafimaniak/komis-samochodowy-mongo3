@@ -35,7 +35,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/css/**", "/js/**", "/images/**", "/api/**",
                                 "/samochody", "/samochody/szczegoly", "/register",
-                                "/search", "/search/**", "/login", "/debug/**").permitAll()
+                                "/search", "/search/**", "/login", "/debug/**",
+                                "/favicon.ico", "/webjars/**", "/static/**").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/klienci", "/pracownicy", "/serwis", "/serwis/**").hasRole("ADMIN")
                         .requestMatchers("/samochody/nowy", "/samochody/edytuj/**",
@@ -92,31 +93,9 @@ public class SecurityConfig {
                 userRepository.save(user);
                 System.out.println("Utworzono usera: user / user");
 
-                User user2 = User.builder()
-                        .username("user2")
-                        .email("user2@komis.pl")
-                        .password(encoder.encode("user123"))
-                        .role("USER")
-                        .enabled(true)
-                        .build();
-                userRepository.save(user2);
-                System.out.println("Utworzono user2: user2 / user123");
-
                 System.out.println("=== UTWORZONO " + userRepository.count() + " UŻYTKOWNIKÓW ===");
             } else {
                 System.out.println("Użytkownicy już istnieją w bazie (" + userRepository.count() + ")");
-
-                if (userRepository.findByUsername("user2").isEmpty()) {
-                    User user2 = User.builder()
-                            .username("user2")
-                            .email("user2@komis.pl")
-                            .password(encoder.encode("user123"))
-                            .role("USER")
-                            .enabled(true)
-                            .build();
-                    userRepository.save(user2);
-                    System.out.println("Utworzono brakującego użytkownika: user2 / user123");
-                }
             }
         };
     }

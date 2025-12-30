@@ -17,6 +17,7 @@ import pl.komis.service.KlientService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Controller
 @RequiredArgsConstructor
@@ -65,42 +66,45 @@ public class RegisterController {
         }
 
         try {
-            // Utwórz użytkownika z timestampem
-            User user = User.builder()
-                    .username(registerRequest.getUsername())
-                    .email(registerRequest.getEmail())
-                    .role("USER")
-                    .enabled(true)
-                    .createdAt(LocalDateTime.now())
-                    .build();
+            // Sprawdź czy klient o tym emailu już istnieje
+            Optional<Klient> existingKlient = klientService.findByEmail(registerRequest.getEmail());
+            Klient klient;
 
-            // Użyj metody createSimpleUser z UserService (ona zakoduje hasło)
-            User savedUser = userService.createSimpleUser(
+            if (existingKlient.isPresent()) {
+                // Użyj istniejącego klienta i zaktualizuj dane
+                klient = existingKlient.get();
+                klient.setImie(registerRequest.getImie());
+                klient.setNazwisko(registerRequest.getNazwisko());
+                klient.setTelefon(registerRequest.getTelefon());
+            } else {
+                // Utwórz nowego klienta
+                klient = new Klient();
+                klient.setImie(registerRequest.getImie());
+                klient.setNazwisko(registerRequest.getNazwisko());
+                klient.setEmail(registerRequest.getEmail());
+                klient.setTelefon(registerRequest.getTelefon());
+                klient.setLiczbaZakupow(0);
+                klient.setProcentPremii(BigDecimal.ZERO);
+                klient.setSaldoPremii(BigDecimal.ZERO);
+                klient.setTotalWydane(BigDecimal.ZERO);
+            }
+
+            // Zapisz klienta
+            Klient savedKlient = klientService.save(klient);
+
+            // Utwórz użytkownika
+            User user = userService.createSimpleUser(
                     registerRequest.getUsername(),
                     registerRequest.getEmail(),
                     registerRequest.getPassword()
             );
 
-            // Ustaw datę utworzenia
-            savedUser.setCreatedAt(LocalDateTime.now());
-            savedUser = userService.save(savedUser);
+            // PRZYPISZ KLIENTA DO UŻYTKOWNIKA - teraz pole klient jest @DBRef
+            user.setKlient(savedKlient);
+            user.setCreatedAt(LocalDateTime.now());
 
-            // Utwórz klienta z danymi z formularza
-            Klient klient = new Klient();
-            klient.setImie(registerRequest.getImie());
-            klient.setNazwisko(registerRequest.getNazwisko());
-            klient.setEmail(registerRequest.getEmail());
-            klient.setTelefon(registerRequest.getTelefon());
-            klient.setLiczbaZakupow(0);
-            klient.setProcentPremii(BigDecimal.ZERO);
-            klient.setSaldoPremii(BigDecimal.ZERO);
-            klient.setTotalWydane(BigDecimal.ZERO);
-
-            klient = klientService.save(klient);
-
-            // Przypisz klienta do użytkownika
-            savedUser.setKlient(klient);
-            userService.save(savedUser);
+            // Zapisz użytkownika z przypisanym klientem
+            User savedUser = userService.saveUser(user);
 
             redirectAttributes.addFlashAttribute("successMessage",
                     "Konto zostało utworzone pomyślnie! Możesz się teraz zalogować.");

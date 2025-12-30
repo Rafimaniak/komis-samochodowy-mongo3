@@ -11,6 +11,7 @@ import pl.komis.repository.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -127,9 +128,69 @@ public class ZakupService {
     }
 
     @Transactional(readOnly = true)
-    public List<Zakup> findByKlientId(String id) {
-        // Usunięto zduplikowaną metodę - użyj tej z repozytorium
-        return zakupRepository.findByKlientId(id);
+    public List<Zakup> findByKlientId(String klientId) {
+        System.out.println("DEBUG: Szukam zakupów dla klienta ID: " + klientId);
+
+        if (klientId == null || klientId.trim().isEmpty()) {
+            System.out.println("DEBUG: klientId jest null lub pusty");
+            return Collections.emptyList();
+        }
+
+        try {
+            // Spróbuj obu metod
+            List<Zakup> zakupy = null;
+
+            // Metoda 1: z @Query
+            try {
+                zakupy = zakupRepository.findByKlientId(klientId);
+                System.out.println("DEBUG: Metoda @Query: znaleziono " + zakupy.size() + " zakupów");
+            } catch (Exception e) {
+                System.err.println("DEBUG: Błąd metody @Query: " + e.getMessage());
+            }
+
+            // Metoda 2: bez @Query (jeśli pierwsza nie działa)
+            if (zakupy == null || zakupy.isEmpty()) {
+                try {
+                    zakupy = zakupRepository.findByKlient_Id(klientId);
+                    System.out.println("DEBUG: Metoda findByKlient_Id: znaleziono " + zakupy.size() + " zakupów");
+                } catch (Exception e) {
+                    System.err.println("DEBUG: Błąd metody findByKlient_Id: " + e.getMessage());
+                }
+            }
+
+            // Metoda 3: ręczne zapytanie przez MongoTemplate
+            if (zakupy == null || zakupy.isEmpty()) {
+                try {
+                    Query query = new Query(Criteria.where("klient.$id").is(klientId));
+                    zakupy = mongoTemplate.find(query, Zakup.class);
+                    System.out.println("DEBUG: Metoda MongoTemplate: znaleziono " + zakupy.size() + " zakupów");
+                } catch (Exception e) {
+                    System.err.println("DEBUG: Błąd metody MongoTemplate: " + e.getMessage());
+                }
+            }
+
+            if (zakupy == null) {
+                zakupy = Collections.emptyList();
+            }
+
+            System.out.println("DEBUG: Łącznie znaleziono " + zakupy.size() + " zakupów");
+
+            // Dla debugowania - wypisz szczegóły
+            for (Zakup zakup : zakupy) {
+                System.out.println("Zakup ID: " + zakup.getId() +
+                        ", Data: " + zakup.getDataZakupu() +
+                        ", Samochód: " + (zakup.getSamochod() != null ?
+                        zakup.getSamochod().getMarka() + " " + zakup.getSamochod().getModel() : "null") +
+                        ", Cena: " + zakup.getCenaZakupu());
+            }
+
+            return zakupy;
+
+        } catch (Exception e) {
+            System.err.println("Błąd w findByKlientId: " + e.getMessage());
+            e.printStackTrace();
+            return Collections.emptyList();
+        }
     }
 
     @Transactional(readOnly = true)

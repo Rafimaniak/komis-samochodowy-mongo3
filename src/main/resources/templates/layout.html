@@ -4,9 +4,9 @@
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
-    <title layout:title-pattern="$CONTENT_TITLE">Komis Samochodowy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title layout:title-pattern="$CONTENT_TITLE - $LAYOUT_TITLE">Komis Samochodowy</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
-<!--    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">-->
 
     <!-- CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -17,61 +17,116 @@
         body {
             padding-top: 20px;
             background-color: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .content-wrapper {
+            flex: 1;
+        }
+        footer {
+            margin-top: auto;
         }
         .navbar {
             margin-bottom: 20px;
         }
         .card {
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
         .badge {
             font-size: 0.9em;
+        }
+        .alert {
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
 
-<!-- Navbar -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-        <a class="navbar-brand" href="/">🚗 Komis Samochodowy</a>
+<div class="content-wrapper">
+    <!-- Wstaw navbar z fragmentu -->
+    <div th:replace="fragments/navbar :: main-nav"></div>
 
-        <div class="navbar-nav">
-            <div sec:authorize="hasRole('ADMIN')">
-                <a class="nav-link" th:href="@{/klienci}">Klienci</a>
-                <a class="nav-link" th:href="@{/pracownicy}">Pracownicy</a>
-                <a class="nav-link" th:href="@{/zakupy}">Zakupy</a>
-                <a class="nav-link" th:href="@{/zakupy/rabaty}">Premie</a>
+    <!-- Komunikaty błędów/sukcesów -->
+    <div layout:fragment="alerts">
+        <div th:if="${successMessage}" class="container">
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                <span th:utext="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         </div>
 
-        <div class="navbar-nav ms-auto">
-            <div sec:authorize="isAuthenticated()">
-                <span class="navbar-text me-3">Witaj, <span sec:authentication="name"></span></span>
-                <a class="nav-link d-inline" href="#" th:href="@{/logout}">Wyloguj</a>
+        <div th:if="${errorMessage}" class="container">
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <span th:utext="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-            <div sec:authorize="!isAuthenticated()">
-                <a class="nav-link" href="/login">Zaloguj</a>
+        </div>
+
+        <div th:if="${warningMessage}" class="container">
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <span th:utext="${warningMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         </div>
     </div>
-</nav>
 
-<!-- Content will be inserted here -->
-<div class="container" layout:fragment="content">
-    <!-- Default content if not overridden -->
-    <h1>Witaj w systemie komisu samochodowego</h1>
+    <!-- Main Content -->
+    <div class="container" layout:fragment="content">
+        <!-- Default content if not overridden -->
+        <div class="text-center mt-5">
+            <h1>🚗 Witaj w Komisie Samochodowym</h1>
+            <p class="lead">Najlepsze samochody w najlepszych cenach!</p>
+            <div class="mt-4">
+                <a href="/samochody" class="btn btn-primary btn-lg me-3">
+                    <i class="fas fa-car me-2"></i> Przeglądaj samochody
+                </a>
+                <a href="/search" class="btn btn-outline-primary btn-lg">
+                    <i class="fas fa-search me-2"></i> Wyszukiwanie zaawansowane
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Footer (optional) -->
+<!-- Footer -->
 <footer class="mt-5 py-3 bg-light">
     <div class="container text-center">
-        <p class="text-muted mb-0">© 2025 Komis Samochodowy. Wszelkie prawa zastrzeżone.</p>
+        <p class="text-muted mb-0">
+            <i class="fas fa-car me-1"></i> © 2025 Komis Samochodowy. Wszelkie prawa zastrzeżone.
+        </p>
+        <p class="text-muted small mt-2">
+            <i class="fas fa-map-marker-alt me-1"></i> ul. Samochodowa 123, 00-000 Warszawa
+            <span class="mx-2">|</span>
+            <i class="fas fa-phone me-1"></i> +48 123 456 789
+            <span class="mx-2">|</span>
+            <i class="fas fa-envelope me-1"></i> kontakt@komis.pl
+        </p>
     </div>
 </footer>
 
 <!-- JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Auto-close alerts after 5 seconds -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            var alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+    });
+</script>
+
+<!-- Additional scripts can be added by child templates -->
+<div layout:fragment="scripts"></div>
 
 </body>
 </html>

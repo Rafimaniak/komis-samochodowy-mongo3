@@ -65,4 +65,11 @@ public class KlientService {
         // Oblicz saldo na podstawie zakupów
         save(klient);
     }
+    public boolean existsByEmail(String email) {
+        return klientRepository.existsByEmail(email);
+    }
+
+    public List<Klient> findAllByEmail(String email) {
+        return klientRepository.findAllByEmail(email);
+    }
 }

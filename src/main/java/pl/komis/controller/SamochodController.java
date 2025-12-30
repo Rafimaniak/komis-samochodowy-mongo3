@@ -237,16 +237,11 @@ public class SamochodController {
 
             // Obsługa zdjęcia
             if (usunZdjecie) {
-                // Usuń zdjęcie
+                // Usuń zdjęcie z bazy
                 samochod.setZdjecieNazwa(null);
-                // Usuń plik z dysku jeśli istnieje
+                // Bezpieczne usunięcie pliku z dysku
                 if (starySamochod.getZdjecieNazwa() != null) {
-                    try {
-                        Path filePath = Paths.get(UPLOAD_DIR + starySamochod.getZdjecieNazwa());
-                        Files.deleteIfExists(filePath);
-                    } catch (IOException e) {
-                        System.err.println("Błąd usuwania pliku: " + e.getMessage());
-                    }
+                    bezpiecznieUsunPlikZdjęcia(starySamochod.getZdjecieNazwa(), id);
                 }
             } else if (zdjeciePlik != null && !zdjeciePlik.isEmpty()) {
                 // Nowe zdjęcie
@@ -258,23 +253,26 @@ public class SamochodController {
 
                 // Generuj unikalną nazwę pliku
                 String originalFileName = zdjeciePlik.getOriginalFilename();
-                String fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
+                String fileExtension = "";
+                if (originalFileName != null && originalFileName.contains(".")) {
+                    fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
+                }
                 String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
 
                 // Zapisz nowy plik
                 Path filePath = uploadPath.resolve(uniqueFileName);
                 Files.copy(zdjeciePlik.getInputStream(), filePath);
 
-                // Usuń stary plik jeśli istnieje
+                // Bezpieczne usunięcie starego pliku
                 if (starySamochod.getZdjecieNazwa() != null) {
-                    Path oldFilePath = Paths.get(UPLOAD_DIR + starySamochod.getZdjecieNazwa());
-                    Files.deleteIfExists(oldFilePath);
+                    bezpiecznieUsunPlikZdjęcia(starySamochod.getZdjecieNazwa(), id);
                 }
 
                 // Ustaw nową nazwę pliku
                 samochod.setZdjecieNazwa(uniqueFileName);
             } else {
-                // Zachowaj stare zdjęcie jeśli nie przysłano nowego
+                // ZACHOWAJ STARE ZDJĘCIE JEŚLI NIE PRZYSŁANO NOWEGO
+                // Ustaw nazwę zdjęcia z starego samochodu
                 samochod.setZdjecieNazwa(starySamochod.getZdjecieNazwa());
             }
 
@@ -306,28 +304,69 @@ public class SamochodController {
         return "redirect:/samochody";
     }
 
+    /**
+     * Bezpiecznie usuwa plik zdjęcia - tylko jeśli nie jest używany przez inne samochody
+     */
+    private void bezpiecznieUsunPlikZdjęcia(String nazwaPliku, String aktualneSamochodId) {
+        if (nazwaPliku == null || nazwaPliku.isEmpty()) {
+            return;
+        }
+
+        try {
+            // Sprawdź czy inne samochody też używają tego samego zdjęcia
+            boolean jestUzywanePrzezInne = false;
+            List<Samochod> wszystkieSamochody = samochodService.findAll();
+
+            for (Samochod samochod : wszystkieSamochody) {
+                if (samochod.getZdjecieNazwa() != null &&
+                        samochod.getZdjecieNazwa().equals(nazwaPliku) &&
+                        !samochod.getId().equals(aktualneSamochodId)) {
+                    jestUzywanePrzezInne = true;
+                    break;
+                }
+            }
+
+            // Usuń tylko jeśli nie jest używane przez inne samochody
+            if (!jestUzywanePrzezInne) {
+                Path filePath = Paths.get(UPLOAD_DIR + nazwaPliku);
+                Files.deleteIfExists(filePath);
+            }
+        } catch (IOException e) {
+            System.err.println("Błąd usuwania pliku: " + e.getMessage());
+        }
+    }
+
     // Usuwanie samochodu - tylko ADMIN
     @PostMapping("/usun")
     @PreAuthorize("hasRole('ADMIN')")
     public String usunSamochod(@RequestParam("id") String id, RedirectAttributes redirectAttributes) {
         try {
-            // Pobierz samochód przed usunięciem, aby usunąć zdjęcie
             Samochod samochod = samochodService.findById(id)
                     .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
 
-            // Usuń zdjęcie z dysku jeśli istnieje
-            if (samochod.getZdjecieNazwa() != null) {
-                try {
-                    Path filePath = Paths.get(UPLOAD_DIR + samochod.getZdjecieNazwa());
+            // Sprawdź czy inne samochody też używają tego samego zdjęcia
+            String zdjecieNazwa = samochod.getZdjecieNazwa();
+            boolean isUsedElsewhere = false;
+
+            if (zdjecieNazwa != null && !zdjecieNazwa.isEmpty()) {
+                List<Samochod> allCars = samochodService.findAll();
+                for (Samochod car : allCars) {
+                    if (!car.getId().equals(id) && zdjecieNazwa.equals(car.getZdjecieNazwa())) {
+                        isUsedElsewhere = true;
+                        break;
+                    }
+                }
+
+                // Usuń zdjęcie tylko jeśli nie jest używane przez inne samochody
+                if (!isUsedElsewhere) {
+                    Path filePath = Paths.get(UPLOAD_DIR + zdjecieNazwa);
                     Files.deleteIfExists(filePath);
-                } catch (IOException e) {
-                    System.err.println("Błąd usuwania pliku zdjęcia: " + e.getMessage());
                 }
             }
 
-            // Usuń samochód z bazy
             samochodService.delete(id);
             redirectAttributes.addFlashAttribute("successMessage", "Samochód usunięty pomyślnie");
+
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Błąd: " + e.getMessage());
         }
@@ -659,6 +698,19 @@ public class SamochodController {
         String[] parts = username.split("\\.");
         if (parts.length > 1) return capitalize(parts[1]);
         return "Klient";
+    }
+    private boolean isImageUsed(String imageName) {
+        if (imageName == null || imageName.isEmpty()) {
+            return false;
+        }
+
+        List<Samochod> allCars = samochodService.findAll();
+        for (Samochod car : allCars) {
+            if (imageName.equals(car.getZdjecieNazwa())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String capitalize(String str) {

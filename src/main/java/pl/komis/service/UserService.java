@@ -13,6 +13,7 @@ import pl.komis.repository.KlientRepository;
 import pl.komis.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -65,7 +66,37 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public User saveUser(User user) {
+        // Jeśli hasło nie jest zakodowane w BCrypt, zakoduj je
+        if (user.getPassword() != null &&
+                !user.getPassword().startsWith("$2a$") &&
+                !user.getPassword().startsWith("$2b$") &&
+                !user.getPassword().startsWith("$2y$")) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
+
+        // Ustaw createdAt jeśli nie ustawione
+        if (user.getCreatedAt() == null) {
+            user.setCreatedAt(LocalDateTime.now());
+        }
+
         return userRepository.save(user);
+    }
+    @Transactional(readOnly = true)
+    public List<User> findByKlientId(String klientId) {
+        // Spróbuj obu zapytań, jedno powinno działać
+        try {
+            List<User> users = userRepository.findByKlientId(klientId);
+            if (users != null && !users.isEmpty()) {
+                return users;
+            }
+
+            // Spróbuj alternatywnego zapytania
+            return userRepository.findByKlientId(klientId);
+        } catch (Exception e) {
+            // Jeśli żadna metoda nie działa, zróbrz ręczne zapytanie
+            System.err.println("Błąd w findByKlientId: " + e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     @Transactional
@@ -108,10 +139,14 @@ public class UserService implements UserDetailsService {
             throw new RuntimeException("Użytkownik już istnieje: " + username);
         }
 
+        if (emailExists(email)) {
+            throw new RuntimeException("Email już istnieje: " + email);
+        }
+
         User user = User.builder()
                 .username(username)
                 .email(email)
-                .password(passwordEncoder.encode(password))
+                .password(passwordEncoder.encode(password))  // Hasło jest kodowane tutaj
                 .role("USER")
                 .enabled(true)
                 .createdAt(LocalDateTime.now())
@@ -125,11 +160,14 @@ public class UserService implements UserDetailsService {
         if (usernameExists(user.getUsername())) {
             throw new RuntimeException("Użytkownik już istnieje: " + user.getUsername());
         }
+        if (emailExists(user.getEmail())) {
+            throw new RuntimeException("Email już istnieje: " + user.getEmail());
+        }
 
         user.setPassword(passwordEncoder.encode(password));
         user.setRole(role);
-        user.setEnabled(true);
-        user.setCreatedAt(LocalDateTime.now());
+        user.setEnabled(user.getEnabled() != null ? user.getEnabled() : true);
+        user.setCreatedAt(user.getCreatedAt() != null ? user.getCreatedAt() : LocalDateTime.now());
 
         return userRepository.save(user);
     }
@@ -196,25 +234,40 @@ public class UserService implements UserDetailsService {
         User user = findById(userId)
                 .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
 
+        // Jeśli użytkownik już ma klienta, sprawdź czy klient istnieje w bazie
         if (user.getKlient() != null) {
-            return user.getKlient();
+            Optional<Klient> existingKlient = klientRepository.findById(user.getKlient().getId());
+            if (existingKlient.isPresent()) {
+                return existingKlient.get();
+            }
         }
 
-        Klient klient = new Klient();
-        klient.setImie(extractFirstName(user.getUsername()));
-        klient.setNazwisko(extractLastName(user.getUsername()));
-        klient.setEmail(user.getEmail());
-        klient.setTelefon("000000000");
-        klient.setLiczbaZakupow(0);
-        klient.setProcentPremii(java.math.BigDecimal.ZERO);
-        klient.setSaldoPremii(java.math.BigDecimal.ZERO);
-        klient.setTotalWydane(java.math.BigDecimal.ZERO);
+        // Sprawdź czy istnieje klient o emailu użytkownika
+        Optional<Klient> klientByEmail = klientRepository.findByEmail(user.getEmail());
+        Klient klient;
 
-        Klient savedKlient = klientRepository.save(klient);
-        user.setKlient(savedKlient);
+        if (klientByEmail.isPresent()) {
+            klient = klientByEmail.get();
+        } else {
+            // Utwórz nowego klienta
+            klient = new Klient();
+            klient.setImie(extractFirstName(user.getUsername()));
+            klient.setNazwisko(extractLastName(user.getUsername()));
+            klient.setEmail(user.getEmail());
+            klient.setTelefon("000000000");
+            klient.setLiczbaZakupow(0);
+            klient.setProcentPremii(java.math.BigDecimal.ZERO);
+            klient.setSaldoPremii(java.math.BigDecimal.ZERO);
+            klient.setTotalWydane(java.math.BigDecimal.ZERO);
+
+            klient = klientRepository.save(klient);
+        }
+
+        // Przypisz klienta do użytkownika
+        user.setKlient(klient);
         userRepository.save(user);
 
-        return savedKlient;
+        return klient;
     }
 
     private String extractFirstName(String username) {

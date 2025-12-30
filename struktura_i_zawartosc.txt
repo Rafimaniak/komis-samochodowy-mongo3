@@ -1,5 +1,5 @@
 Eksport struktury katalogów i plików
-Wygenerowano: 12/28/2025 00:32:32
+Wygenerowano: 12/30/2025 05:37:59
 .idea
 komis-dump
 komis-mongodb
@@ -21,13 +21,17 @@ README.md
 komis-dump\komis
 komis-dump\komis\klienci.bson
 komis-dump\komis\klienci.metadata.json
-komis-dump\komis\komis.bson
-komis-dump\komis\komis.metadata.json
+komis-dump\komis\klienci_promocje.bson
+komis-dump\komis\klienci_promocje.metadata.json
 komis-dump\komis\pracownicy.bson
 komis-dump\komis\pracownicy.metadata.json
 komis-dump\komis\prelude.json
+komis-dump\komis\promocje.bson
+komis-dump\komis\promocje.metadata.json
 komis-dump\komis\samochody.bson
 komis-dump\komis\samochody.metadata.json
+komis-dump\komis\serwis.bson
+komis-dump\komis\serwis.metadata.json
 komis-dump\komis\users.bson
 komis-dump\komis\users.metadata.json
 komis-dump\komis\zakupy.bson
@@ -66,9 +70,12 @@ src\main\java\pl\komis\config\MongoConfig.java
 src\main\java\pl\komis\config\MongoDataMigrator.java
 src\main\java\pl\komis\config\SecurityConfig.java
 src\main\java\pl\komis\controller\AdminController.java
+src\main\java\pl\komis\controller\AdminMigrationController.java
 src\main\java\pl\komis\controller\AdminUserController.java
 src\main\java\pl\komis\controller\DebugController.java
 src\main\java\pl\komis\controller\FileUploadController.java
+src\main\java\pl\komis\controller\FixDuplicatesController.java
+src\main\java\pl\komis\controller\ImageCleanupController.java
 src\main\java\pl\komis\controller\KlientController.java
 src\main\java\pl\komis\controller\KlientPromocjaController.java
 src\main\java\pl\komis\controller\LoginController.java
@@ -98,6 +105,7 @@ src\main\java\pl\komis\repository\SamochodRepository.java
 src\main\java\pl\komis\repository\SerwisRepository.java
 src\main\java\pl\komis\repository\UserRepository.java
 src\main\java\pl\komis\repository\ZakupRepository.java
+src\main\java\pl\komis\service\KlientMigrationService.java
 src\main\java\pl\komis\service\KlientPromocjaService.java
 src\main\java\pl\komis\service\KlientService.java
 src\main\java\pl\komis\service\PracownikService.java
@@ -113,7 +121,22 @@ src\main\resources\application.yml
 src\main\resources\import.sql
 src\main\resources\static\images
 src\main\resources\static\images\samochody
+src\main\resources\static\images\samochody\09bbdbfa-96ad-40e2-a273-240a3d30173a.png
+src\main\resources\static\images\samochody\101e4aa6-903a-4dfc-8373-ad73ef17b577.png
+src\main\resources\static\images\samochody\2178b4ce-ad95-4561-9b28-9088c5c87ba8.png
+src\main\resources\static\images\samochody\2b28ab53-e0aa-4d51-a226-747aa1c9d385.png
+src\main\resources\static\images\samochody\41ce9dca-60f5-49ef-a042-c2cb291d87a8.png
+src\main\resources\static\images\samochody\468d8ad0-874d-418d-9601-4e7d866ad177.png
+src\main\resources\static\images\samochody\8256e471-e3e8-4786-9e66-cd1927001f7e.jpg
+src\main\resources\static\images\samochody\91f6e6ea-ebaf-4d50-9232-6c75178047c0.png
+src\main\resources\static\images\samochody\96508f03-250b-4711-9fd7-6437c32dcb38.png
+src\main\resources\static\images\samochody\a20b8644-e19a-49bc-a0d6-13544fd4f822.png
+src\main\resources\static\images\samochody\a50fd122-d562-4e36-99d4-6f3b3f3c650d.png
+src\main\resources\static\images\samochody\ac60e196-e56f-4607-902c-ecb8ba602141.png
+src\main\resources\static\images\samochody\b9b58263-2796-47c6-9369-8e6a0c760d79.png
+src\main\resources\static\images\samochody\d1a5f4f8-f652-4913-bc5b-7bce7ded5fb9.png
 src\main\resources\static\images\samochody\domyslny.jpg
+src\main\resources\static\images\samochody\e50f6199-2bf6-4055-914c-a70aa32aa139.png
 src\main\resources\templates\admin
 src\main\resources\templates\fragments
 src\main\resources\templates\klieci
@@ -136,7 +159,11 @@ src\main\resources\templates\serwis_raport.html
 src\main\resources\templates\zakupy_form.html
 src\main\resources\templates\zakupy_lista.html
 src\main\resources\templates\admin\change-password.html
+src\main\resources\templates\admin\check-duplicates.html
+src\main\resources\templates\admin\debug-zakupy.html
+src\main\resources\templates\admin\migration-result.html
 src\main\resources\templates\admin\panel.html
+src\main\resources\templates\admin\unused-images.html
 src\main\resources\templates\admin\user-form.html
 src\main\resources\templates\admin\users.html
 src\main\resources\templates\fragments\navbar.html
@@ -161,6 +188,6 @@ src\main\resources\templates\zakupy\wykorzystaj-saldo.html
 
 ================ PODSUMOWANIE ================
 Foldery: 31
-Pliki: 127
-Razem: 158 elementów
-Data zakoñczenia: 12/28/2025 00:32:33
+Pliki: 154
+Razem: 185 elementów
+Data zakoñczenia: 12/30/2025 05:37:59

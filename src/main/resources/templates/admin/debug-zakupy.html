@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Debug - Zakupy</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4">
+    <h1>Debugowanie zakupów</h1>
+
+    <div class="alert alert-info">
+        <strong>Klientów w systemie:</strong> [[${totalClients}]]
+    </div>
+
+    <div th:each="entry : ${debugInfo}">
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong>Klient:</strong>
+                <span th:text="${entry.value.klient.imie} + ' ' + ${entry.value.klient.nazwisko}"></span>
+                (ID: [[${entry.key}]], Email: [[${entry.value.klient.email}]])
+            </div>
+            <div class="card-body">
+                <p><strong>Liczba zakupów:</strong> [[${entry.value.liczbaZakupow}]]</p>
+
+                <div th:if="${entry.value.zakupy != null and !entry.value.zakupy.isEmpty()}">
+                    <table class="table table-sm">
+                        <thead>
+                        <tr>
+                            <th>ID zakupu</th>
+                            <th>Data</th>
+                            <th>Samochód</th>
+                            <th>Cena</th>
+                            <th>Klient w zakupie</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="zakup : ${entry.value.zakupy}">
+                            <td>[[${zakup.id}]]</td>
+                            <td>[[${zakup.dataZakupu}]]</td>
+                            <td>
+                                    <span th:if="${zakup.samochod != null}">
+                                        [[${zakup.samochod.marka}]] [[${zakup.samochod.model}]]
+                                    </span>
+                                <span th:if="${zakup.samochod == null}">null</span>
+                            </td>
+                            <td>[[${zakup.cenaZakupu}]]</td>
+                            <td>
+                                    <span th:if="${zakup.klient != null}">
+                                        ID: [[${zakup.klient.id}]]
+                                    </span>
+                                <span th:if="${zakup.klient == null}">null</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div th:if="${entry.value.zakupy == null or entry.value.zakupy.isEmpty()}">
+                    <p class="text-muted">Brak zakupów</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="/admin" class="btn btn-secondary">Powrót do panelu</a>
+</div>
+</body>
+</html>

@@ -1,39 +1,131 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Moje saldo premii</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+    <title th:text="${tytul} ?: 'Moje saldo premii'"></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            padding-top: 70px;
+            background-color: #f8f9fa;
+        }
+        .navbar-custom {
+            background-color: #343a40 !important;
+        }
+        .stat-card {
+            padding: 20px;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+            margin-bottom: 15px;
+        }
+    </style>
 </head>
 <body>
-<h1>Moje saldo premii</h1>
 
-<div th:if="${klient}">
-    <div class="card">
+<!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top navbar-custom">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <i class="fas fa-car"></i> Komis Samochodowy
+        </a>
+        <div class="navbar-nav ms-auto">
+            <a class="nav-link" href="/samochody">
+                <i class="fas fa-list"></i> Samochody
+            </a>
+            <a class="nav-link" href="/zakupy/moje">
+                <i class="fas fa-shopping-cart"></i> Moje zakupy
+            </a>
+            <a class="nav-link active" href="/premia/saldo">
+                <i class="fas fa-wallet"></i> Moje konto premii
+            </a>
+            <a class="nav-link" href="/logout">
+                <i class="fas fa-sign-out-alt"></i> Wyloguj
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <h1 th:text="${tytul} ?: 'Moje konto premii'"></h1>
+
+    <div th:if="${errorMessage}" class="alert alert-danger">
+        [[${errorMessage}]]
+    </div>
+
+    <div th:if="${klient}" class="card mb-4 shadow">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0"><i class="fas fa-wallet"></i>
+                <span th:text="'Konto premii - ' + ${klient.imie} + ' ' + ${klient.nazwisko}"></span>
+            </h5>
+        </div>
         <div class="card-body">
-            <h5 class="card-title">Stan konta premii</h5>
-            <p><strong>Saldo dostępne:</strong> <span th:text="${saldo}">0.00</span> zł</p>
-            <p><strong>Procent premii na następny zakup:</strong> <span th:text="${procentPremii}">0</span>%</p>
-            <p><strong>Liczba dokonanych zakupów:</strong> <span th:text="${liczbaZakupow}">0</span></p>
-            <p><strong>Łącznie wydano:</strong> <span th:text="${totalWydane}">0.00</span> zł</p>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h6 class="text-muted">Saldo premii</h6>
+                        <h3 class="text-success">
+                            <i class="fas fa-coins"></i>
+                            <span th:if="${saldo != null and saldo.compareTo(0) == 0}">0 zł</span>
+                            <span th:if="${saldo != null and saldo.compareTo(0) != 0}"
+                                  th:text="${#numbers.formatDecimal(saldo, 0, 'COMMA', 2, 'POINT') + ' zł'}"></span>
+                            <span th:if="${saldo == null}">0 zł</span>
+                        </h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h6 class="text-muted">Procent premii</h6>
+                        <h3 th:text="${procentPremii != null ? procentPremii + ' %' : '0 %'}"></h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h6 class="text-muted">Liczba zakupów</h6>
+                        <h3 th:text="${liczbaZakupow != null ? liczbaZakupow : 0}"></h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h6 class="text-muted">Łącznie wydano</h6>
+                        <h3 class="text-primary">
+                            <span th:if="${totalWydane != null and totalWydane.compareTo(0) == 0}">0 zł</span>
+                            <span th:if="${totalWydane != null and totalWydane.compareTo(0) != 0}"
+                                  th:text="${#numbers.formatDecimal(totalWydane, 0, 'COMMA', 2, 'POINT') + ' zł'}"></span>
+                            <span th:if="${totalWydane == null}">0 zł</span>
+                        </h3>
+                    </div>
+                </div>
+            </div>
 
             <div class="alert alert-info mt-3">
-                <h6>Jak działają premie?</h6>
-                <ul>
-                    <li>Po 2 zakupach: 5% premii</li>
-                    <li>Po 3 zakupach: 10% premii</li>
-                    <li>Po 5 zakupach: 15% premii</li>
-                    <li>Premia jest naliczana od ceny bazowej samochodu</li>
-                    <li>Saldo możesz wykorzystać przy kolejnych zakupach</li>
-                </ul>
+                <h6><i class="fas fa-info-circle"></i> Jak działa system premii?</h6>
+                <ol class="mb-0">
+                    <li>Za każdy zakup otrzymujesz premię jako procent od wartości zakupu.</li>
+                    <li>Premia jest dodawana do Twojego konta w postaci realnych pieniędzy.</li>
+                    <li>Zebrane środki możesz wykorzystać przy kolejnych zakupach.</li>
+                    <li>Procent premii rośnie z liczbą zakupów:
+                        <ul>
+                            <li>2 zakupy = 5% premii</li>
+                            <li>3 zakupy = 10% premii</li>
+                            <li>5+ zakupów = 15% premii</li>
+                        </ul>
+                    </li>
+                </ol>
             </div>
         </div>
     </div>
+
+    <div th:unless="${klient}" class="alert alert-warning">
+        Nie jesteś zarejestrowany jako klient. Skontaktuj się z administracją.
+    </div>
+
+    <a href="/samochody" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Powrót do listy samochodów
+    </a>
 </div>
 
-<div th:unless="${klient}" class="alert alert-warning">
-    Nie jesteś zarejestrowany jako klient. Skontaktuj się z administracją.
-</div>
-
-<a th:href="@{/}" class="btn btn-secondary">Powrót</a>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
