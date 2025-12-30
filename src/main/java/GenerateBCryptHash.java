@@ -4,15 +4,15 @@ public class GenerateBCryptHash {
     public static void main(String[] args) {
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-        System.out.println("=== HASHE BCrypt dla 'haslo123' ===");
-        for (int i = 1; i <= 10; i++) {
-            String hash = encoder.encode("haslo123");
-            System.out.println("Hash " + i + ": " + hash);
-        }
+        String hash1 = "$2a$10$RQzLGZh0ien2Sc4PQRMXOODpClf5grhfJHh0tCl/.6CISYeWkvolW";
+        String hash2 = "$2a$10$ZrBWFCKfzxdPO/z3e4JIVOKXKAe7G2gd5YQg8hNqMq271Y5bwcoXU0";
 
-        // Aby zweryfikować
-        String testHash = encoder.encode("haslo123");
-        boolean matches = encoder.matches("haslo123", testHash);
-        System.out.println("\nWeryfikacja: hasło 'haslo123' pasuje do hash? " + matches);
+        System.out.println("Hash1 matches 'admin': " + encoder.matches("admin", hash1));
+        System.out.println("Hash2 matches 'admin': " + encoder.matches("admin", hash2));
+
+        // Wygeneruj nowy hash dla "admin"
+        String hash3 = encoder.encode("admin");
+        System.out.println("Nowy hash: " + hash3);
+        System.out.println("Hash3 matches 'admin': " + encoder.matches("admin", hash3));
     }
 }
