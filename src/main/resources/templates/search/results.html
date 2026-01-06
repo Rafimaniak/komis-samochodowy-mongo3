@@ -22,7 +22,7 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1><i class="fas fa-search me-2"></i>Wyniki wyszukiwania</h1>
-        <span class="badge bg-primary fs-6" th:text="'Znaleziono: ' + ${resultsCount} + ' samochodów'"></span>
+        <span class="badge bg-primary fs-6" th:text="'Znaleziono: ' + ${samochody != null ? samochody.size() : 0} + ' samochodów'"></span>
     </div>
 
     <div class="card mb-4">

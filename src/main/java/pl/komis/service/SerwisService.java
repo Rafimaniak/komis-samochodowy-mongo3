@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Optional;  // DODANO IMPORT
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -31,7 +31,6 @@ public class SerwisService {
     }
 
     public Serwis save(Serwis serwis) {
-        // GENERUJ NOWE ID JEŚLI NIE MA
         if (serwis.getId() == null || serwis.getId().trim().isEmpty()) {
             serwis.setId(new ObjectId().toString());
         }
@@ -58,44 +57,38 @@ public class SerwisService {
         return serwisRepository.findZakonczone();
     }
 
-    // ZMIENIONE: Używamy dedykowanych metod
     public long countZarezerwowane() {
         return serwisRepository.countByKosztIsNull();
     }
 
-    // ZMIENIONE: Używamy dedykowanych metod
     public long countZakonczone() {
         return serwisRepository.countByKosztIsNotNull();
     }
 
-    public BigDecimal getTotalKoszt() {
+    public Double getTotalKoszt() {
         return serwisRepository.findZakonczone().stream()
                 .map(Serwis::getKoszt)
                 .filter(k -> k != null)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(0.0, Double::sum);
     }
 
-    // NOWA METODA: Pobierz mapę samochodów do wyświetlania nazw
     public Map<String, Samochod> getSamochodyMap() {
         return samochodService.findAll().stream()
                 .collect(Collectors.toMap(Samochod::getId, Function.identity()));
     }
 
-    // NOWA METODA: Pobierz mapę pracowników do wyświetlania nazw
     public Map<String, pl.komis.model.Pracownik> getPracownicyMap() {
         return pracownikService.findAll().stream()
                 .collect(Collectors.toMap(pl.komis.model.Pracownik::getId, Function.identity()));
     }
 
-    // NOWA METODA: Metoda do zakończenia serwisu (ustawienie kosztu)
-    public void zakonczSerwis(String id, BigDecimal koszt) {
+    public void zakonczSerwis(String id, Double koszt) {
         Serwis serwis = serwisRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Serwis nie znaleziony"));
         serwis.setKoszt(koszt);
         serwisRepository.save(serwis);
     }
 
-    // NOWA METODA: Metoda do anulowania serwisu (tylko jeśli zarezerwowany)
     public void anulujSerwis(String id) {
         Serwis serwis = serwisRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Serwis nie znaleziony"));
@@ -106,25 +99,24 @@ public class SerwisService {
         }
     }
 
-    // NOWA METODA: Pobierz wszystkie samochody dla formularza
     public List<Samochod> getAllSamochody() {
         return samochodService.findAll();
     }
 
-    // NOWA METODA: Pobierz wszystkich pracowników dla formularza
     public List<pl.komis.model.Pracownik> getAllPracownicy() {
         return pracownikService.findAll();
     }
 
-    // Metoda pomocnicza do wypełniania danych w kontrolerze
     public Serwis prepareSerwisForDisplay(Serwis serwis) {
         if (serwis == null) return serwis;
 
-        // Jeśli potrzebujesz pełnych obiektów zamiast ID:
         if (serwis.getSamochodId() != null) {
-            samochodService.findById(serwis.getSamochodId()).ifPresent(samochod -> {
-                // Możesz dodać logikę do wypełnienia danych samochodu
-            });
+            // BEZ Optional.ifPresent - używamy zwykłego warunku
+            Samochod samochod = samochodService.findById(serwis.getSamochodId());
+            if (samochod != null) {
+                serwis.setSamochodMarka(samochod.getMarka());
+                serwis.setSamochodModel(samochod.getModel());
+            }
         }
 
         return serwis;

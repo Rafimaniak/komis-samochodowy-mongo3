@@ -145,8 +145,11 @@
             <div class="stat-card border-primary">
                 <h6><i class="fas fa-wallet"></i> Łączne saldo premii</h6>
                 <h3 class="text-primary">
-                    <span th:with="saldoInt=${totalSaldo.stripTrailingZeros().scale() <= 0}"
-                          th:text="${'💰 ' + (saldoInt ? #numbers.formatInteger(totalSaldo, 0, 'WHITESPACE') : #numbers.formatDecimal(totalSaldo, 0, 'WHITESPACE', 2, 'COMMA')) + ' zł'}">
+                    <span th:text="${totalSaldo != null ?
+                            '💰 ' + (totalSaldo % 1 == 0 ?
+                                #numbers.formatInteger(totalSaldo, 0, 'WHITESPACE') :
+                                #numbers.formatDecimal(totalSaldo, 0, 'WHITESPACE', 2, 'COMMA')) + ' zł'
+                            : '💰 0 zł'}">
                     </span>
                 </h3>
             </div>
@@ -155,8 +158,11 @@
             <div class="stat-card border-success">
                 <h6><i class="fas fa-money-bill-wave"></i> Łącznie wydano</h6>
                 <h3 class="text-success">
-                    <span th:with="wydaneInt=${totalWydane.stripTrailingZeros().scale() <= 0}"
-                          th:text="${(wydaneInt ? #numbers.formatInteger(totalWydane, 0, 'WHITESPACE') : #numbers.formatDecimal(totalWydane, 0, 'WHITESPACE', 2, 'COMMA')) + ' zł'}">
+                    <span th:text="${totalWydane != null ?
+                            (totalWydane % 1 == 0 ?
+                                #numbers.formatInteger(totalWydane, 0, 'WHITESPACE') :
+                                #numbers.formatDecimal(totalWydane, 0, 'WHITESPACE', 2, 'COMMA')) + ' zł'
+                            : '0 zł'}">
                     </span>
                 </h3>
             </div>
@@ -198,21 +204,33 @@
                         <td th:text="${klient.email}"></td>
                         <td th:text="${klient.liczbaZakupow}"></td>
                         <td>
-                            <span th:text="${klient.procentPremii} + '%'"
+                            <span th:text="${klient.procentPremii != null ?
+                                    (klient.procentPremii % 1 == 0 ?
+                                        #numbers.formatInteger(klient.procentPremii, 0, 'WHITESPACE') :
+                                        #numbers.formatDecimal(klient.procentPremii, 0, 'WHITESPACE', 1, 'COMMA')) + '%'
+                                    : '0%'}"
                                   class="badge"
-                                  th:class="${(klient.procentPremii.compareTo(new java.math.BigDecimal('15')) >= 0) ? 'bg-success' : ((klient.procentPremii.compareTo(new java.math.BigDecimal('10')) >= 0) ? 'bg-primary' : ((klient.procentPremii.compareTo(new java.math.BigDecimal('5')) >= 0) ? 'bg-info' : 'bg-secondary'))}">
+                                  th:class="${klient.procentPremii >= 15} ? 'bg-success' :
+                                            (${klient.procentPremii >= 10} ? 'bg-primary' :
+                                            (${klient.procentPremii >= 5} ? 'bg-info' : 'bg-secondary'))">
                             </span>
                         </td>
                         <td>
-                            <span th:with="saldoInt=${klient.saldoPremii.stripTrailingZeros().scale() <= 0}"
-                                  th:text="${(saldoInt ? #numbers.formatInteger(klient.saldoPremii, 0, 'WHITESPACE') : #numbers.formatDecimal(klient.saldoPremii, 0, 'WHITESPACE', 2, 'COMMA')) + ' zł'}"
+                            <span th:text="${klient.saldoPremii != null ?
+                                    (klient.saldoPremii % 1 == 0 ?
+                                        #numbers.formatInteger(klient.saldoPremii, 0, 'WHITESPACE') :
+                                        #numbers.formatDecimal(klient.saldoPremii, 0, 'WHITESPACE', 2, 'COMMA')) + ' zł'
+                                    : '0 zł'}"
                                   class="badge"
                                   th:class="${klient.saldoPremii > 0} ? 'bg-warning' : 'bg-secondary'">
                             </span>
                         </td>
                         <td>
-                            <span th:with="wydaneInt=${klient.totalWydane.stripTrailingZeros().scale() <= 0}"
-                                  th:text="${(wydaneInt ? #numbers.formatInteger(klient.totalWydane, 0, 'WHITESPACE') : #numbers.formatDecimal(klient.totalWydane, 0, 'WHITESPACE', 2, 'COMMA')) + ' zł'}">
+                            <span th:text="${klient.totalWydane != null ?
+                                    (klient.totalWydane % 1 == 0 ?
+                                        #numbers.formatInteger(klient.totalWydane, 0, 'WHITESPACE') :
+                                        #numbers.formatDecimal(klient.totalWydane, 0, 'WHITESPACE', 2, 'COMMA')) + ' zł'
+                                    : '0 zł'}">
                             </span>
                         </td>
                         <td>

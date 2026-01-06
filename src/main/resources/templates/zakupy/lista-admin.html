@@ -27,6 +27,13 @@
         .table {
             margin-bottom: 0;
         }
+        .table td {
+            white-space: nowrap;
+        }
+
+        .text-muted {
+            color: #6c757d !important;
+        }
     </style>
 </head>
 <body>
@@ -110,37 +117,133 @@
                 <table class="table table-striped table-hover">
                     <thead class="table-dark">
                     <tr>
+                        <th>ID Zakupu</th>
                         <th>Samochód</th>
                         <th>Klient</th>
                         <th>Pracownik</th>
                         <th>Data zakupu</th>
-                        <th>Cena</th>
+                        <th>Cena bazowa</th>
+                        <th>Cena zakupu</th>
+                        <th>Rabat</th>
+                        <th>Wykorzystane saldo</th>
                         <th>Akcje</th>
                     </tr>
                     </thead>
                     <tbody>
                     <tr th:each="z : ${zakupy}">
                         <td>
-                            <strong th:text="${z.samochod.marka + ' ' + z.samochod.model}"></strong><br>
-                            <small class="text-muted" th:text="'Rok: ' + ${z.samochod.rokProdukcji}"></small>
-                        </td>
-                        <td th:text="${z.klient != null ? z.klient.imie + ' ' + z.klient.nazwisko : 'Brak danych'}"></td>
-                        <td th:text="${z.pracownik != null ? z.pracownik.imie + ' ' + z.pracownik.nazwisko : 'Brak danych'}"></td>
-                        <td th:text="${z.dataZakupu != null ? #temporals.format(z.dataZakupu, 'dd.MM.yyyy') : 'Brak'}"></td>
-                        <td class="text-success fw-bold"
-                            th:text="${z.cenaZakupu != null ? #numbers.formatDecimal(z.cenaZakupu, 0, 2, 'POINT') + ' zł' : 'Brak'}">
+                            <small class="text-muted" th:text="${z.id}"></small>
                         </td>
                         <td>
-                            <form th:action="@{/zakupy/usun/{id}(id=${z.id})}" method="post"
-                                  onsubmit="return confirm('Czy na pewno chcesz usunąć ten zakup?');">
-                                <button type="submit" class="btn btn-danger btn-sm">
-                                    <i class="fas fa-trash"></i> Usuń
-                                </button>
-                            </form>
+                            <strong th:text="${z.samochodMarka + ' ' + z.samochodModel}"></strong><br>
+                        </td>
+                        <td th:text="${z.klientImieNazwisko} ?: 'Brak danych'"></td>
+                        <td th:text="${z.pracownikImieNazwisko} ?: 'Brak danych'"></td>
+                        <td th:text="${z.dataZakupu != null ? #temporals.format(z.dataZakupu, 'dd.MM.yyyy') : 'Brak'}"></td>
+                        <td class="text-muted"
+                            th:text="${z.cenaBazowa != null ?
+                                    (z.cenaBazowa % 1 == 0 ?
+                                        #numbers.formatInteger(z.cenaBazowa, 0, 'COMMA') + ' zł' :
+                                        #numbers.formatDecimal(z.cenaBazowa, 0, 'COMMA', 2, 'POINT') + ' zł')
+                                    : 'Brak'}">
+                        </td>
+                        <td class="text-success fw-bold"
+                            th:text="${z.cenaZakupu != null ?
+                                    (z.cenaZakupu % 1 == 0 ?
+                                        #numbers.formatInteger(z.cenaZakupu, 0, 'COMMA') + ' zł' :
+                                        #numbers.formatDecimal(z.cenaZakupu, 0, 'COMMA', 2, 'POINT') + ' zł')
+                                    : 'Brak'}">
+                        </td>
+                        <td>
+                            <span th:if="${z.zastosowanyRabat != null && z.zastosowanyRabat > 0}"
+                                  class="badge bg-success"
+                                  th:text="${z.zastosowanyRabat % 1 == 0 ?
+                                           #numbers.formatInteger(z.zastosowanyRabat, 0, 'COMMA') :
+                                           #numbers.formatDecimal(z.zastosowanyRabat, 0, 'COMMA', 1, 'POINT')} + '%'">
+                            </span>
+                            <span th:if="${z.zastosowanyRabat == null || z.zastosowanyRabat == 0}"
+                                  class="badge bg-secondary">0%</span>
+                        </td>
+                        <td th:class="${z.wykorzystaneSaldo != null && z.wykorzystaneSaldo > 0} ? 'text-warning' : 'text-muted'"
+                            th:text="${z.wykorzystaneSaldo != null ?
+                                    (z.wykorzystaneSaldo % 1 == 0 ?
+                                        #numbers.formatInteger(z.wykorzystaneSaldo, 0, 'COMMA') + ' zł' :
+                                        #numbers.formatDecimal(z.wykorzystaneSaldo, 0, 'COMMA', 2, 'POINT') + ' zł')
+                                    : '0 zł'}">
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a th:href="@{/zakupy/szczegoly/} + ${z.id}"
+                                   class="btn btn-info"
+                                   title="Szczegóły">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <form th:action="@{/zakupy/usun/} + ${z.id}"
+                                      method="post"
+                                      style="display: inline;"
+                                      onsubmit="return confirm('Czy na pewno chcesz usunąć ten zakup?');">
+                                    <button type="submit" class="btn btn-danger" title="Usuń">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Statystyki -->
+            <div class="mt-4" th:unless="${brakZakupow}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Łącznie zakupów</h6>
+                                <h3 th:text="${zakupy.size()}" class="text-primary">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Suma zakupów</h6>
+                                <h3 th:text="${sumaCenaZakupu != null ?
+                                        (sumaCenaZakupu % 1 == 0 ?
+                                            #numbers.formatInteger(sumaCenaZakupu, 0, 'COMMA') :
+                                            #numbers.formatDecimal(sumaCenaZakupu, 0, 'COMMA', 2, 'POINT')) + ' zł'
+                                        : '0 zł'}"
+                                    class="text-success">0 zł</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Wykorzystane saldo</h6>
+                                <h3 th:text="${sumaWykorzystaneSaldo != null ?
+                                        (sumaWykorzystaneSaldo % 1 == 0 ?
+                                            #numbers.formatInteger(sumaWykorzystaneSaldo, 0, 'COMMA') :
+                                            #numbers.formatDecimal(sumaWykorzystaneSaldo, 0, 'COMMA', 2, 'POINT')) + ' zł'
+                                        : '0 zł'}"
+                                    class="text-warning">0 zł</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Średni rabat</h6>
+                                <h3 th:text="${sredniRabat != null ?
+                                        (sredniRabat % 1 == 0 ?
+                                            #numbers.formatInteger(sredniRabat, 0, 'COMMA') :
+                                            #numbers.formatDecimal(sredniRabat, 0, 'COMMA', 1, 'POINT')) + '%'
+                                        : '0%'}"
+                                    class="text-info">0%</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -149,9 +252,23 @@
         <a th:href="@{/admin}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Powrót do panelu
         </a>
+        <a th:href="@{/zakupy/rabaty}" class="btn btn-primary">
+            <i class="fas fa-gift"></i> System premii
+        </a>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Potwierdzenie przy usuwaniu
+    document.addEventListener('DOMContentLoaded', function() {
+        const deleteForms = document.querySelectorAll('form[onsubmit]');
+        deleteForms.forEach(form => {
+            form.onsubmit = function() {
+                return confirm('Czy na pewno chcesz usunąć ten zakup?');
+            };
+        });
+    });
+</script>
 </body>
 </html>

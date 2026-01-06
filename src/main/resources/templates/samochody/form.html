@@ -31,7 +31,7 @@
 
                     <!-- JEDEN formularz dla dodawania i edycji -->
                     <form th:action="@{/samochody/zapisz}" method="post" th:object="${samochod}" enctype="multipart/form-data">
-                        <input type="hidden" th:field="*{id}">
+                        <input type="hidden" th:name="id" th:value="${samochod.id}">
                         <input type="hidden" th:field="*{dataDodania}">
 
                         <div class="row">

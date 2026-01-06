@@ -26,10 +26,17 @@ public class Serwis {
     @Field("opisUslugi")
     private String opisUslugi;
 
-    private BigDecimal koszt;
+    private Double koszt;
 
     @Field("dataSerwisu")
     private LocalDate dataSerwisu;
+
+    // DODANE: Pola do przechowywania marki i modelu samochodu
+    @Field("samochod_marka")
+    private String samochodMarka;
+
+    @Field("samochod_model")
+    private String samochodModel;
 
     // Metody pomocnicze
     public String getStatus() {
@@ -42,5 +49,11 @@ public class Serwis {
 
     public boolean isZakonczony() {
         return koszt != null;
+    }
+
+    // DODANE: Metoda do ustawiania danych samochodu
+    public void setSamochodInfo(String marka, String model) {
+        this.samochodMarka = marka;
+        this.samochodModel = model;
     }
 }

@@ -10,22 +10,23 @@ import java.util.List;
 
 @Repository
 public interface ZakupRepository extends MongoRepository<Zakup, String> {
+    long count();
 
-    // POPRAWIONE: Dla @DBRef używaj '$id'
-    @Query("{'klient.$id': ?0}")
+    // POPRAWIONE: Używamy 'klient_id' zamiast 'klient.$id'
+    @Query("{'klient_id': ?0}")
     List<Zakup> findByKlientId(String klientId);
 
-    // Albo alternatywna metoda (bez @Query)
-    List<Zakup> findByKlient_Id(String klientId);
+    // USUŃ TĘ LINIĘ - metoda jest niepoprawna
+    // List<Zakup> findByKlient_Id(String klientId);
 
-    @Query("{'pracownik.$id': ?0}")
+    @Query("{'pracownik_id': ?0}")
     List<Zakup> findByPracownikId(String pracownikId);
 
     List<Zakup> findByDataZakupuBetween(LocalDate startDate, LocalDate endDate);
 
-    @Query("{'samochod.$id': ?0}")
+    @Query("{'samochod_id': ?0}")
     boolean existsBySamochodId(String samochodId);
 
-    @Query("{'samochod.$id': ?0, 'klient.$id': ?1}")
+    @Query("{'samochod_id': ?0, 'klient_id': ?1}")
     boolean existsBySamochodIdAndKlientId(String samochodId, String klientId);
 }

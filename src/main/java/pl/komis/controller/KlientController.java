@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import pl.komis.model.Klient;
 import pl.komis.service.KlientService;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,17 +26,36 @@ public class KlientController {
         // Pobierz wszystkich klientów (encja Klient)
         List<Klient> klienci = klientService.findAll();
 
-        // Oblicz statystyki
-        BigDecimal totalSaldo = klienci.stream()
-                .map(k -> k.getSaldoPremii() != null ? k.getSaldoPremii() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // NAPRAWIONE: Popraw wartości NaN przed użyciem
+        for (Klient klient : klienci) {
+            if (klient.getSaldoPremii() != null &&
+                    (klient.getSaldoPremii().isNaN() || klient.getSaldoPremii().isInfinite())) {
+                klient.setSaldoPremii(0.0);
+            }
+            if (klient.getTotalWydane() != null &&
+                    (klient.getTotalWydane().isNaN() || klient.getTotalWydane().isInfinite())) {
+                klient.setTotalWydane(0.0);
+            }
+            if (klient.getProcentPremii() != null &&
+                    (klient.getProcentPremii().isNaN() || klient.getProcentPremii().isInfinite())) {
+                klient.setProcentPremii(0.0);
+            }
+        }
 
-        BigDecimal totalWydane = klienci.stream()
-                .map(k -> k.getTotalWydane() != null ? k.getTotalWydane() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // NAPRAWIONE: Oblicz statystyki (bez NaN)
+        double totalSaldo = klienci.stream()
+                .filter(k -> k.getSaldoPremii() != null)
+                .mapToDouble(Klient::getSaldoPremii)
+                .sum();
 
+        double totalWydane = klienci.stream()
+                .filter(k -> k.getTotalWydane() != null)
+                .mapToDouble(Klient::getTotalWydane)
+                .sum();
+
+        // NAPRAWIONE: Poprawne sprawdzenie czy ma premię
         long klienciZPremia = klienci.stream()
-                .filter(k -> k.getProcentPremii() != null && k.getProcentPremii().compareTo(BigDecimal.ZERO) > 0)
+                .filter(k -> k.getProcentPremii() != null && k.getProcentPremii() > 0.0)
                 .count();
 
         model.addAttribute("klienci", klienci);
@@ -62,6 +80,21 @@ public class KlientController {
             }
 
             Klient klient = klientOpt.get();
+
+            // NAPRAWIONE: Popraw NaN dla pojedynczego klienta
+            if (klient.getSaldoPremii() != null &&
+                    (klient.getSaldoPremii().isNaN() || klient.getSaldoPremii().isInfinite())) {
+                klient.setSaldoPremii(0.0);
+            }
+            if (klient.getTotalWydane() != null &&
+                    (klient.getTotalWydane().isNaN() || klient.getTotalWydane().isInfinite())) {
+                klient.setTotalWydane(0.0);
+            }
+            if (klient.getProcentPremii() != null &&
+                    (klient.getProcentPremii().isNaN() || klient.getProcentPremii().isInfinite())) {
+                klient.setProcentPremii(0.0);
+            }
+
             model.addAttribute("klient", klient);
             model.addAttribute("tytul", "Szczegóły klienta: " + klient.getImie() + " " + klient.getNazwisko());
 

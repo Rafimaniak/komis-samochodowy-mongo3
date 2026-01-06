@@ -7,6 +7,7 @@ spring:
     mongodb:
       uri: mongodb://localhost:27017/komis
       database: komis
+      auto-index-creation: true
 
   main:
     allow-circular-references: true
@@ -14,3 +15,9 @@ spring:
 
 server:
   port: 8080
+
+# Opcjonalne - dla lepszej wydajności
+logging:
+  level:
+    org.springframework.data.mongodb.core.MongoTemplate: DEBUG
+    pl.komis: DEBUG

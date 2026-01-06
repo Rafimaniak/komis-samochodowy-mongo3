@@ -18,8 +18,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 
 @Controller
 @RequestMapping("/samochody")
@@ -29,200 +31,167 @@ public class SamochodController {
     private final SamochodService samochodService;
     private final UserService userService;
     private final KlientService klientService;
-    private final PracownikService pracownikService;
     private final ZakupService zakupService;
+    private final PracownikService pracownikService;
 
-    // Ścieżka do katalogu ze zdjęciami
-    private static final String UPLOAD_DIR = "src/main/resources/static/images/samochody/";
+    private static final String UPLOAD_DIR = "uploads/";
 
-    // Widok listy samochodów z wyszukiwarką
-    @GetMapping
-    public String listaSamochodow(
-            @RequestParam(required = false) String marka,
-            @RequestParam(required = false) String model,
-            @RequestParam(required = false) String status,
-            Model modelAttribute) {
+    // Pomocnicza metoda do pobierania Samochodu (obsługuje Optional)
+    private Samochod getSamochodById(String id) {
+        // Sprawdź czy serwis zwraca Optional czy bezpośredni obiekt
+        Object result = samochodService.findById(id);
 
-        List<Samochod> samochody;
-
-        if ((marka != null && !marka.isEmpty()) ||
-                (model != null && !model.isEmpty()) ||
-                (status != null && !status.isEmpty())) {
-            samochody = samochodService.searchCarsSimple(marka, model, status);
+        if (result instanceof Optional) {
+            return ((Optional<Samochod>) result)
+                    .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
         } else {
-            samochody = samochodService.findAll();
+            Samochod samochod = (Samochod) result;
+            if (samochod == null) {
+                throw new RuntimeException("Samochód nie znaleziony");
+            }
+            return samochod;
         }
+    }
 
-        long dostepne = samochody.stream()
-                .filter(s -> "DOSTEPNY".equals(s.getStatus()))
-                .count();
-        long zarezerwowane = samochody.stream()
-                .filter(s -> "ZAREZERWOWANY".equals(s.getStatus()))
-                .count();
-        long sprzedane = samochody.stream()
-                .filter(s -> "SPRZEDANY".equals(s.getStatus()))
-                .count();
+    // Pomocnicza metoda do pobierania User (obsługuje Optional)
+    private User getUserByUsername(String username) {
+        Object result = userService.findByUsername(username);
 
-        modelAttribute.addAttribute("samochody", samochody);
-        modelAttribute.addAttribute("marki", samochodService.findAllMarki());
-        modelAttribute.addAttribute("searchMarka", marka);
-        modelAttribute.addAttribute("searchModel", model);
-        modelAttribute.addAttribute("searchStatus", status);
-        modelAttribute.addAttribute("hasSearchParams",
-                (marka != null && !marka.isEmpty()) ||
-                        (model != null && !model.isEmpty()) ||
-                        (status != null && !status.isEmpty()));
+        if (result instanceof Optional) {
+            return ((Optional<User>) result)
+                    .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
+        } else {
+            User user = (User) result;
+            if (user == null) {
+                throw new RuntimeException("Użytkownik nie znaleziony");
+            }
+            return user;
+        }
+    }
 
-        modelAttribute.addAttribute("dostepneCount", dostepne);
-        modelAttribute.addAttribute("zarezerwowaneCount", zarezerwowane);
-        modelAttribute.addAttribute("sprzedaneCount", sprzedane);
+    // Pomocnicza metoda do pobierania Klient (obsługuje Optional)
+    private Klient getKlientById(String id) {
+        Object result = klientService.findById(id);
 
-        return "samochody/lista";
+        if (result instanceof Optional) {
+            return ((Optional<Klient>) result)
+                    .orElseThrow(() -> new RuntimeException("Klient nie znaleziony"));
+        } else {
+            Klient klient = (Klient) result;
+            if (klient == null) {
+                throw new RuntimeException("Klient nie znaleziony");
+            }
+            return klient;
+        }
     }
 
     @GetMapping("/szczegoly")
     public String szczegolySamochodu(@RequestParam("id") String id, Model model, Authentication authentication) {
-        Samochod samochod = samochodService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
-
-        model.addAttribute("samochod", samochod);
-        model.addAttribute("tytul", samochod.getMarka() + " " + samochod.getModel());
-
-        // DODAJ TĘ CZĘŚĆ: Wyświetlanie ceny z rabatem i saldem
-        if (authentication != null && authentication.isAuthenticated()) {
-            String username = authentication.getName();
-
-            // Znajdź użytkownika
-            userService.findByUsername(username).ifPresent(user -> {
-                if (user.getKlient() != null) {
-                    Klient klient = user.getKlient();
-                    BigDecimal rabat = klient.getProcentPremii();
-                    BigDecimal saldo = klient.getSaldoPremii() != null ? klient.getSaldoPremii() : BigDecimal.ZERO;
-
-                    // PRZEKAŻ DANE DO WIDOKU
-                    model.addAttribute("klientRabat", rabat);
-                    model.addAttribute("klientSaldo", saldo);
-                    model.addAttribute("klient", klient);
-
-                    // Oblicz maksymalną kwotę do wykorzystania
-                    BigDecimal cenaBazowa = samochod.getCena();
-                    BigDecimal maksWykorzystanie = saldo.min(cenaBazowa);
-                    model.addAttribute("maksWykorzystanie", maksWykorzystanie);
-
-                    // Oblicz premię, która zostanie naliczona
-                    if (rabat != null && rabat.compareTo(BigDecimal.ZERO) > 0) {
-                        BigDecimal premiaOdZakupu = cenaBazowa.multiply(rabat)
-                                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                        model.addAttribute("premiaOdZakupu", premiaOdZakupu);
-                    }
-
-                    // Oblicz cenę po rabacie
-                    if (rabat != null && rabat.compareTo(BigDecimal.ZERO) > 0) {
-                        BigDecimal mnoznikRabatu = BigDecimal.ONE
-                                .subtract(rabat.divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
-                        BigDecimal cenaPoRabacie = cenaBazowa.multiply(mnoznikRabatu)
-                                .setScale(2, RoundingMode.HALF_UP);
-
-                        model.addAttribute("cenaPoRabacie", cenaPoRabacie);
-                    }
-
-                    // Sprawdź czy użytkownik jest tym, który zarezerwował
-                    if (samochod.getZarezerwowanyPrzez() != null) {
-                        boolean czyZarezerwowanyPrzezeMnie = klient.getId().equals(samochod.getZarezerwowanyPrzez().getId());
-                        model.addAttribute("czyZarezerwowanyPrzezeMnie", czyZarezerwowanyPrzezeMnie);
-                    } else {
-                        model.addAttribute("czyZarezerwowanyPrzezeMnie", false);
-                    }
-                } else {
-                    model.addAttribute("klientRabat", BigDecimal.ZERO);
-                    model.addAttribute("klientSaldo", BigDecimal.ZERO);
-                    model.addAttribute("czyZarezerwowanyPrzezeMnie", false);
-                }
-            });
-        } else {
-            // Dla niezalogowanych
-            model.addAttribute("klientRabat", BigDecimal.ZERO);
-            model.addAttribute("klientSaldo", BigDecimal.ZERO);
-            model.addAttribute("czyZarezerwowanyPrzezeMnie", false);
-        }
-
-        return "samochody/szczegoly";
-    }
-
-    // Formularz dodawania nowego samochodu - tylko ADMIN
-    @GetMapping("/nowy")
-    @PreAuthorize("hasRole('ADMIN')")
-    public String formNowySamochod(Model model) {
-        model.addAttribute("samochod", new Samochod());
-        model.addAttribute("tytul", "Dodaj Nowy Samochód");
-        return "samochody/form";
-    }
-
-    // Zapisywanie nowego samochodu - tylko ADMIN
-    @PostMapping("/zapisz")
-    @PreAuthorize("hasRole('ADMIN')")
-    public String zapiszSamochod(@ModelAttribute Samochod samochod,
-                                 @RequestParam(value = "zdjeciePlik", required = false) MultipartFile zdjeciePlik,
-                                 RedirectAttributes redirectAttributes) {
         try {
-            // Obsługa uploadu zdjęcia
-            if (zdjeciePlik != null && !zdjeciePlik.isEmpty()) {
-                // Utwórz katalog jeśli nie istnieje
-                Path uploadPath = Paths.get(UPLOAD_DIR);
-                if (!Files.exists(uploadPath)) {
-                    Files.createDirectories(uploadPath);
+            Samochod samochod = getSamochodById(id);
+            model.addAttribute("samochod", samochod);
+            model.addAttribute("tytul", samochod.getMarka() + " " + samochod.getModel());
+
+            // Inicjalizuj zmienne dla niezalogowanych użytkowników
+            Double klientRabat = 0.0;
+            Double klientSaldo = 0.0;
+            Double cenaPoRabacie = samochod.getCena(); // ZMIANA: pełna cena
+            Double premiaOdZakupu = 0.0;
+            Double maksWykorzystanie = 0.0;
+            boolean czyZarezerwowanyPrzezeMnie = false;
+
+            // Jeśli użytkownik jest zalogowany
+            if (authentication != null && authentication.isAuthenticated()) {
+                String username = authentication.getName();
+                User user = getUserByUsername(username);
+
+                // Sprawdź czy użytkownik ma powiązanego klienta
+                if (user.getKlientId() != null) {
+                    Klient klient = getKlientById(user.getKlientId());
+
+                    // Pobierz rabat klienta
+                    klientRabat = klient.getProcentPremii() != null ?
+                            klient.getProcentPremii().doubleValue() : 0.0;
+                    klientSaldo = klient.getSaldoPremii() != null ?
+                            klient.getSaldoPremii().doubleValue() : 0.0;
+
+                    // NIE obniżamy ceny! Pokazujemy pełną cenę.
+                    cenaPoRabacie = samochod.getCena(); // ZMIANA: zawsze pełna cena
+
+                    // Oblicz premię od zakupu (ale nie odejmujemy od ceny!)
+                    if (klientRabat > 0.0) {
+                        premiaOdZakupu = samochod.getCena() * (klientRabat / 100.0);
+                        premiaOdZakupu = Math.round(premiaOdZakupu * 100.0) / 100.0;
+                    }
+
+                    // Oblicz maksymalne wykorzystanie salda (20% ceny LUB saldo, co jest mniejsze)
+                    Double maksProcentowo = samochod.getCena() * 0.20; // 20% pełnej ceny
+                    maksWykorzystanie = Math.min(maksProcentowo, klientSaldo);
+                    maksWykorzystanie = Math.round(maksWykorzystanie * 100.0) / 100.0;
+
+                    // Sprawdź czy użytkownik zarezerwował ten samochód
+                    if (samochod.getZarezerwowanyPrzezKlientId() != null) {
+                        czyZarezerwowanyPrzezeMnie = samochod.getZarezerwowanyPrzezKlientId()
+                                .equals(klient.getId());
+                    }
                 }
-
-                // Generuj unikalną nazwę pliku
-                String originalFileName = zdjeciePlik.getOriginalFilename();
-                String fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
-                String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
-
-                // Zapisz plik
-                Path filePath = uploadPath.resolve(uniqueFileName);
-                Files.copy(zdjeciePlik.getInputStream(), filePath);
-
-                // Ustaw nazwę pliku w modelu
-                samochod.setZdjecieNazwa(uniqueFileName);
             }
 
-            // Ustaw domyślne wartości dla brakujących pól
-            if (samochod.getDataDodania() == null) {
-                samochod.setDataDodania(LocalDate.now());
-            }
-            if (samochod.getRodzajPaliwa() == null) {
-                samochod.setRodzajPaliwa("Benzyna");
-            }
-            if (samochod.getSkrzyniaBiegow() == null) {
-                samochod.setSkrzyniaBiegow("Manualna");
-            }
-            if (samochod.getPojemnoscSilnika() == null) {
-                samochod.setPojemnoscSilnika(2.0);
-            }
+            // Dodaj atrybuty do modelu
+            model.addAttribute("klientRabat", klientRabat);
+            model.addAttribute("klientSaldo", klientSaldo);
+            model.addAttribute("cenaPoRabacie", cenaPoRabacie); // To teraz pełna cena
+            model.addAttribute("premiaOdZakupu", premiaOdZakupu);
+            model.addAttribute("maksWykorzystanie", maksWykorzystanie);
+            model.addAttribute("czyZarezerwowanyPrzezeMnie", czyZarezerwowanyPrzezeMnie);
 
-            samochodService.save(samochod);
-            redirectAttributes.addFlashAttribute("successMessage", "Samochód zapisany pomyślnie");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Błąd: " + e.getMessage());
-            e.printStackTrace();
-            return "redirect:/samochody/nowy";
+            return "samochody/szczegoly";
+
+        } catch (RuntimeException e) {
+            model.addAttribute("error", "Samochód nie został znaleziony");
+            return "error";
         }
+    }
 
+    @PostMapping("/zarezerwuj/{id}")
+    public String zarezerwujSamochod(@PathVariable String id, Model model) {
+        Samochod samochod = getSamochodById(id);
+        samochod.setStatus("ZAREZERWOWANY");
+        samochodService.save(samochod);
         return "redirect:/samochody";
     }
 
-    // Formularz edycji samochodu - tylko ADMIN
+    @GetMapping("/edytuj/{id}")
+    public String edytujSamochod(@PathVariable String id, Model model) {
+        Samochod samochod = getSamochodById(id);
+        model.addAttribute("samochod", samochod);
+        return "samochody/formularz";
+    }
+
+    @PostMapping("/aktualizuj/{id}")
+    public String aktualizujSamochod(@PathVariable String id,
+                                     @ModelAttribute Samochod samochod,
+                                     Model model) {
+        try {
+            getSamochodById(id); // Sprawdź czy istnieje
+            samochod.setId(id);
+            samochodService.save(samochod);
+            return "redirect:/samochody";
+        } catch (RuntimeException e) {
+            model.addAttribute("error", "Samochód nie istnieje");
+            return "error";
+        }
+    }
+
     @GetMapping("/edytuj")
     @PreAuthorize("hasRole('ADMIN')")
     public String formEdycjaSamochodu(@RequestParam("id") String id, Model model) {
-        Samochod samochod = samochodService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
+        Samochod samochod = getSamochodById(id);
         model.addAttribute("samochod", samochod);
         model.addAttribute("tytul", "Edytuj Samochód");
         return "samochody/form";
     }
 
-    // Aktualizacja samochodu - tylko ADMIN
     @PostMapping("/edytuj")
     @PreAuthorize("hasRole('ADMIN')")
     public String aktualizujSamochod(@ModelAttribute Samochod samochod,
@@ -231,27 +200,20 @@ public class SamochodController {
                                      @RequestParam(value = "usunZdjecie", required = false, defaultValue = "false") boolean usunZdjecie,
                                      RedirectAttributes redirectAttributes) {
         try {
-            // Pobierz stary samochód do zachowania danych
-            Samochod starySamochod = samochodService.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
+            Samochod starySamochod = getSamochodById(id);
 
             // Obsługa zdjęcia
             if (usunZdjecie) {
-                // Usuń zdjęcie z bazy
                 samochod.setZdjecieNazwa(null);
-                // Bezpieczne usunięcie pliku z dysku
                 if (starySamochod.getZdjecieNazwa() != null) {
                     bezpiecznieUsunPlikZdjęcia(starySamochod.getZdjecieNazwa(), id);
                 }
             } else if (zdjeciePlik != null && !zdjeciePlik.isEmpty()) {
-                // Nowe zdjęcie
-                // Utwórz katalog jeśli nie istnieje
                 Path uploadPath = Paths.get(UPLOAD_DIR);
                 if (!Files.exists(uploadPath)) {
                     Files.createDirectories(uploadPath);
                 }
 
-                // Generuj unikalną nazwę pliku
                 String originalFileName = zdjeciePlik.getOriginalFilename();
                 String fileExtension = "";
                 if (originalFileName != null && originalFileName.contains(".")) {
@@ -259,30 +221,21 @@ public class SamochodController {
                 }
                 String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
 
-                // Zapisz nowy plik
                 Path filePath = uploadPath.resolve(uniqueFileName);
                 Files.copy(zdjeciePlik.getInputStream(), filePath);
 
-                // Bezpieczne usunięcie starego pliku
                 if (starySamochod.getZdjecieNazwa() != null) {
                     bezpiecznieUsunPlikZdjęcia(starySamochod.getZdjecieNazwa(), id);
                 }
 
-                // Ustaw nową nazwę pliku
                 samochod.setZdjecieNazwa(uniqueFileName);
             } else {
-                // ZACHOWAJ STARE ZDJĘCIE JEŚLI NIE PRZYSŁANO NOWEGO
-                // Ustaw nazwę zdjęcia z starego samochodu
                 samochod.setZdjecieNazwa(starySamochod.getZdjecieNazwa());
             }
 
-            // Zachowaj datę dodania
             samochod.setDataDodania(starySamochod.getDataDodania());
-
-            // Ustaw ID
             samochod.setId(id);
 
-            // Ustaw domyślne wartości jeśli null
             if (samochod.getRodzajPaliwa() == null) {
                 samochod.setRodzajPaliwa("Benzyna");
             }
@@ -304,16 +257,12 @@ public class SamochodController {
         return "redirect:/samochody";
     }
 
-    /**
-     * Bezpiecznie usuwa plik zdjęcia - tylko jeśli nie jest używany przez inne samochody
-     */
     private void bezpiecznieUsunPlikZdjęcia(String nazwaPliku, String aktualneSamochodId) {
         if (nazwaPliku == null || nazwaPliku.isEmpty()) {
             return;
         }
 
         try {
-            // Sprawdź czy inne samochody też używają tego samego zdjęcia
             boolean jestUzywanePrzezInne = false;
             List<Samochod> wszystkieSamochody = samochodService.findAll();
 
@@ -326,7 +275,6 @@ public class SamochodController {
                 }
             }
 
-            // Usuń tylko jeśli nie jest używane przez inne samochody
             if (!jestUzywanePrzezInne) {
                 Path filePath = Paths.get(UPLOAD_DIR + nazwaPliku);
                 Files.deleteIfExists(filePath);
@@ -336,15 +284,12 @@ public class SamochodController {
         }
     }
 
-    // Usuwanie samochodu - tylko ADMIN
     @PostMapping("/usun")
     @PreAuthorize("hasRole('ADMIN')")
     public String usunSamochod(@RequestParam("id") String id, RedirectAttributes redirectAttributes) {
         try {
-            Samochod samochod = samochodService.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
+            Samochod samochod = getSamochodById(id);
 
-            // Sprawdź czy inne samochody też używają tego samego zdjęcia
             String zdjecieNazwa = samochod.getZdjecieNazwa();
             boolean isUsedElsewhere = false;
 
@@ -357,7 +302,6 @@ public class SamochodController {
                     }
                 }
 
-                // Usuń zdjęcie tylko jeśli nie jest używane przez inne samochody
                 if (!isUsedElsewhere) {
                     Path filePath = Paths.get(UPLOAD_DIR + zdjecieNazwa);
                     Files.deleteIfExists(filePath);
@@ -372,8 +316,116 @@ public class SamochodController {
         }
         return "redirect:/samochody";
     }
+    @GetMapping("/nowy")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String formNowySamochod(Model model) {
+        model.addAttribute("samochod", new Samochod());
+        model.addAttribute("tytul", "Dodaj nowy samochód");
+        return "samochody/form";
+    }
 
-    // Rezerwacja samochodu - dla zalogowanych użytkowników
+    @PostMapping("/zapisz")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String zapiszSamochod(
+            @ModelAttribute Samochod samochod,
+            @RequestParam(value = "zdjeciePlik", required = false) MultipartFile zdjeciePlik,
+            @RequestParam(value = "usunZdjecie", required = false, defaultValue = "false") boolean usunZdjecie,
+            RedirectAttributes redirectAttributes) {
+
+        try {
+            // FIX: Zamień pusty string na null dla nowego samochodu
+            if (samochod.getId() != null && samochod.getId().trim().isEmpty()) {
+                samochod.setId(null);
+            }
+
+            // Jeśli to nowy samochód (brak ID)
+            if (samochod.getId() == null) {
+                samochod.setDataDodania(LocalDate.now());
+                samochod.setStatus("DOSTEPNY");
+
+                // Obsługa zdjęcia dla nowego samochodu
+                if (zdjeciePlik != null && !zdjeciePlik.isEmpty()) {
+                    // Zapisz nowe zdjęcie
+                    Path uploadPath = Paths.get(UPLOAD_DIR);
+                    if (!Files.exists(uploadPath)) {
+                        Files.createDirectories(uploadPath);
+                    }
+
+                    String originalFileName = zdjeciePlik.getOriginalFilename();
+                    String fileExtension = "";
+                    if (originalFileName != null && originalFileName.contains(".")) {
+                        fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
+                    }
+                    String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
+
+                    Path filePath = uploadPath.resolve(uniqueFileName);
+                    Files.copy(zdjeciePlik.getInputStream(), filePath);
+                    samochod.setZdjecieNazwa(uniqueFileName);
+                } else {
+                    samochod.setZdjecieNazwa("domyslny.jpg");
+                }
+            } else {
+                // Jeśli to edycja istniejącego samochodu
+                Samochod starySamochod = getSamochodById(samochod.getId());
+                samochod.setDataDodania(starySamochod.getDataDodania());
+
+                // Obsługa zdjęcia (logika z metody edytuj)
+                if (usunZdjecie) {
+                    samochod.setZdjecieNazwa(null);
+                    if (starySamochod.getZdjecieNazwa() != null) {
+                        bezpiecznieUsunPlikZdjęcia(starySamochod.getZdjecieNazwa(), samochod.getId());
+                    }
+                } else if (zdjeciePlik != null && !zdjeciePlik.isEmpty()) {
+                    // Zapisz nowe zdjęcie
+                    Path uploadPath = Paths.get(UPLOAD_DIR);
+                    if (!Files.exists(uploadPath)) {
+                        Files.createDirectories(uploadPath);
+                    }
+
+                    String originalFileName = zdjeciePlik.getOriginalFilename();
+                    String fileExtension = "";
+                    if (originalFileName != null && originalFileName.contains(".")) {
+                        fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
+                    }
+                    String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
+
+                    Path filePath = uploadPath.resolve(uniqueFileName);
+                    Files.copy(zdjeciePlik.getInputStream(), filePath);
+
+                    if (starySamochod.getZdjecieNazwa() != null) {
+                        bezpiecznieUsunPlikZdjęcia(starySamochod.getZdjecieNazwa(), samochod.getId());
+                    }
+
+                    samochod.setZdjecieNazwa(uniqueFileName);
+                } else {
+                    samochod.setZdjecieNazwa(starySamochod.getZdjecieNazwa());
+                }
+            }
+
+            // Ustaw domyślne wartości
+            if (samochod.getRodzajPaliwa() == null) {
+                samochod.setRodzajPaliwa("Benzyna");
+            }
+            if (samochod.getSkrzyniaBiegow() == null) {
+                samochod.setSkrzyniaBiegow("Manualna");
+            }
+            if (samochod.getPojemnoscSilnika() == null) {
+                samochod.setPojemnoscSilnika(2.0);
+            }
+
+            samochodService.save(samochod);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    samochod.getId() == null ? "Samochód dodany pomyślnie" : "Samochód zaktualizowany pomyślnie");
+
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Błąd: " + e.getMessage());
+            e.printStackTrace();
+            return "redirect:/samochody" + (samochod.getId() != null ? "/edytuj?id=" + samochod.getId() : "/nowy");
+        }
+
+        return "redirect:/samochody";
+    }
+
     @PostMapping("/zarezerwuj")
     @PreAuthorize("isAuthenticated()")
     public String zarezerwujSamochod(@RequestParam("id") String id,
@@ -382,31 +434,27 @@ public class SamochodController {
         try {
             System.out.println("=== ROZPOCZĘCIE REZERWACJI SAMOCHODU ID: " + id + " ===");
 
-            Samochod samochod = samochodService.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
-
+            Samochod samochod = getSamochodById(id);
             System.out.println("Samochód: " + samochod.getMarka() + " " + samochod.getModel());
             System.out.println("Status przed rezerwacją: " + samochod.getStatus());
 
-            // Pobierz aktualnego użytkownika
             String username = authentication.getName();
-            User user = userService.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
+            User user = getUserByUsername(username);
 
             System.out.println("Użytkownik: " + user.getUsername());
-            System.out.println("Czy ma klienta: " + (user.getKlient() != null));
+            System.out.println("Czy ma klienta: " + (user.getKlientId() != null));
 
-            // Upewnij się, że użytkownik ma klienta
-            Klient klient = user.getKlient();
-            if (klient == null) {
+            String klientId = user.getKlientId();
+            if (klientId == null) {
                 System.out.println("Brak klienta - tworzę...");
-                klient = userService.ensureUserHasKlient(user.getId());
+                Klient klient = userService.ensureUserHasKlient(user.getId());
+                klientId = klient.getId();
             }
 
+            Klient klient = getKlientById(klientId);
             System.out.println("Klient ID: " + klient.getId());
             System.out.println("Klient: " + klient.getImie() + " " + klient.getNazwisko());
 
-            // Sprawdź czy samochód jest dostępny
             if (!"DOSTEPNY".equals(samochod.getStatus())) {
                 String errorMsg = "Samochód nie jest dostępny do rezerwacji. Aktualny status: " + samochod.getStatus();
                 System.out.println("BŁĄD: " + errorMsg);
@@ -414,15 +462,14 @@ public class SamochodController {
                 return "redirect:/samochody/szczegoly?id=" + id;
             }
 
-            // Zarezerwuj samochód dla tego klienta
             samochod.setStatus("ZAREZERWOWANY");
-            samochod.setZarezerwowanyPrzez(klient);
+            samochod.setZarezerwowanyPrzezKlientId(klientId);
             samochod.setDataRezerwacji(LocalDate.now());
 
             samochodService.save(samochod);
 
-            System.out.println("Rezerwacja udana! Klient ID: " + klient.getId());
-            System.out.println("Samochód zarezerwowany przez: " + samochod.getZarezerwowanyPrzez().getId());
+            System.out.println("Rezerwacja udana! Klient ID: " + klientId);
+            System.out.println("Samochód zarezerwowany przez klienta ID: " + samochod.getZarezerwowanyPrzezKlientId());
             System.out.println("Status po rezerwacji: " + samochod.getStatus());
 
             redirectAttributes.addFlashAttribute("successMessage",
@@ -440,7 +487,6 @@ public class SamochodController {
         }
     }
 
-    // Zakup samochodu - dla zalogowanych użytkowników
     @PostMapping("/kup")
     @PreAuthorize("isAuthenticated()")
     public String kupSamochod(
@@ -451,60 +497,49 @@ public class SamochodController {
         try {
             System.out.println("=== ROZPOCZĘCIE ZAKUPU SAMOCHODU ID: " + id + " ===");
 
-            // 1. Pobierz samochód
-            Samochod samochod = samochodService.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
-
+            Samochod samochod = getSamochodById(id);
             System.out.println("Samochód: " + samochod.getMarka() + " " + samochod.getModel());
             System.out.println("Status: " + samochod.getStatus());
 
-            // 2. Pobierz użytkownika
             String username = authentication.getName();
-            User user = userService.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
+            User user = getUserByUsername(username);
             System.out.println("Użytkownik: " + user.getUsername());
 
-            // 3. Upewnij się, że użytkownik ma klienta
-            Klient klient = user.getKlient();
-            if (klient == null) {
-                klient = userService.ensureUserHasKlient(user.getId());
-                if (klient == null) {
+            String klientId = user.getKlientId();
+            if (klientId == null) {
+                Klient klient = userService.ensureUserHasKlient(user.getId());
+                klientId = klient.getId();
+                if (klientId == null) {
                     throw new RuntimeException("Nie można utworzyć klienta dla użytkownika");
                 }
             }
 
+            Klient klient = getKlientById(klientId);
             System.out.println("Klient ID: " + klient.getId());
 
-            // 4. SPRAWDŹ CZY MOŻNA KUPIĆ TEN SAMOCHÓD
             if (!"DOSTEPNY".equals(samochod.getStatus()) && !"ZAREZERWOWANY".equals(samochod.getStatus())) {
                 throw new RuntimeException("Samochód nie jest dostępny do sprzedaży. Status: " + samochod.getStatus());
             }
 
-            // 5. Jeśli zarezerwowany, sprawdź czy to TEN SAM klient
             if ("ZAREZERWOWANY".equals(samochod.getStatus())) {
-                if (samochod.getZarezerwowanyPrzez() == null) {
+                if (samochod.getZarezerwowanyPrzezKlientId() == null) {
                     System.out.println("UWAGA: Samochód zarezerwowany, ale brak przypisanego klienta");
-                    // Można kontynuować - być może stara rezerwacja bez przypisania
-                } else if (!samochod.getZarezerwowanyPrzez().getId().equals(klient.getId())) {
+                } else if (!samochod.getZarezerwowanyPrzezKlientId().equals(klientId)) {
                     throw new RuntimeException("Ten samochód jest zarezerwowany przez innego klienta. " +
                             "Tylko osoba rezerwująca może go kupić.");
                 }
             }
 
-            // 6. Zaktualizuj status samochodu
             samochod.setStatus("SPRZEDANY");
-            samochod.setZarezerwowanyPrzez(null); // Wyczyść rezerwację po zakupie
+            samochod.setZarezerwowanyPrzezKlientId(null);
             samochod.setDataRezerwacji(null);
             samochodService.save(samochod);
 
             System.out.println("Status zmieniony na: SPRZEDANY");
 
-            // 7. Znajdź pracownika (pierwszego z listy)
             Pracownik pracownik = pracownikService.findAll().stream()
                     .findFirst()
                     .orElseGet(() -> {
-                        // Jeśli brak pracowników, utwórz domyślnego
                         Pracownik p = new Pracownik();
                         p.setImie("Pracownik");
                         p.setNazwisko("Domyślny");
@@ -517,63 +552,56 @@ public class SamochodController {
 
             System.out.println("Pracownik: " + pracownik.getImie() + " " + pracownik.getNazwisko());
 
-            // 8. Oblicz cenę z rabatem
-            BigDecimal cenaBazowa = samochod.getCena();
-            BigDecimal rabatProcent = klient.getProcentPremii() != null ?
-                    klient.getProcentPremii() : BigDecimal.ZERO;
+            Double cenaBazowa = samochod.getCena();
+            Double rabatProcent = klient.getProcentPremii() != null ?
+                    klient.getProcentPremii().doubleValue() : 0.0;
 
-            BigDecimal cenaZRabatem = cenaBazowa;
-            if (rabatProcent.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal mnoznikRabatu = BigDecimal.ONE
-                        .subtract(rabatProcent.divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
-                cenaZRabatem = cenaBazowa.multiply(mnoznikRabatu)
-                        .setScale(2, RoundingMode.HALF_UP);
+            // POPRAWIONE: Nie obniżamy ceny o premię!
+            // Cena zakupu = cena bazowa (nie odejmujemy premii!)
+            Double cenaZakupu = cenaBazowa; // ZMIANA: nie obniżamy ceny o premię!
+            System.out.println("Cena zakupu: " + cenaZakupu + " zł (pełna cena)");
 
-                System.out.println("Zastosowano rabat: " + rabatProcent + "%");
-                System.out.println("Cena po rabacie: " + cenaZRabatem);
-            }
-
-            // 9. Oblicz premię, która zostanie dodana do salda
-            BigDecimal naliczonaPremia = BigDecimal.ZERO;
-            if (rabatProcent.compareTo(BigDecimal.ZERO) > 0) {
-                naliczonaPremia = cenaBazowa.multiply(rabatProcent)
-                        .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            Double naliczonaPremia = 0.0;
+            if (rabatProcent > 0.0) {
+                naliczonaPremia = cenaBazowa * (rabatProcent / 100.0);
+                naliczonaPremia = Math.round(naliczonaPremia * 100.0) / 100.0;
                 System.out.println("Naliczona premia: " + naliczonaPremia + " zł");
             }
 
-            // 10. Utwórz zakup
             Zakup zakup = Zakup.builder()
-                    .samochod(samochod)
-                    .klient(klient)
-                    .pracownik(pracownik)
+                    .samochodId(samochod.getId())
+                    .klientId(klient.getId())
+                    .pracownikId(pracownik.getId())
+                    .samochodMarka(samochod.getMarka())
+                    .samochodModel(samochod.getModel())
+                    .klientImieNazwisko(klient.getImie() + " " + klient.getNazwisko())
+                    .pracownikImieNazwisko(pracownik.getImie() + " " + pracownik.getNazwisko())
                     .dataZakupu(LocalDate.now())
                     .cenaBazowa(cenaBazowa)
-                    .cenaZakupu(cenaZRabatem)
+                    .cenaZakupu(cenaZakupu) // ZMIANA: pełna cena, nie obniżona
                     .zastosowanyRabat(rabatProcent)
                     .naliczonaPremia(naliczonaPremia)
-                    .wykorzystaneSaldo(BigDecimal.ZERO) // Normalny zakup bez wykorzystania salda
+                    .wykorzystaneSaldo(0.0)
                     .build();
 
             Zakup zapisanyZakup = zakupService.save(zakup);
             System.out.println("Zakup zapisany! ID: " + zapisanyZakup.getId());
 
-            // 11. Aktualizuj dane klienta (liczba zakupów, wydane kwoty)
             klient.setLiczbaZakupow(klient.getLiczbaZakupow() + 1);
-            klient.setTotalWydane(klient.getTotalWydane().add(cenaZRabatem));
+            klient.setTotalWydane(klient.getTotalWydane() + cenaZakupu);
 
-            // Aktualizuj procent premii na podstawie liczby zakupów
             if (klient.getLiczbaZakupow() >= 5) {
-                klient.setProcentPremii(new BigDecimal("15"));
+                klient.setProcentPremii(15.0);
             } else if (klient.getLiczbaZakupow() >= 3) {
-                klient.setProcentPremii(new BigDecimal("10"));
+                klient.setProcentPremii(10.0);
             } else if (klient.getLiczbaZakupow() >= 2) {
-                klient.setProcentPremii(new BigDecimal("5"));
+                klient.setProcentPremii(5.0);
             } else {
-                klient.setProcentPremii(BigDecimal.ZERO);
+                klient.setProcentPremii(0.0);
             }
 
             // Dodaj premię do salda klienta
-            klient.setSaldoPremii(klient.getSaldoPremii().add(naliczonaPremia));
+            klient.setSaldoPremii(klient.getSaldoPremii() + naliczonaPremia);
 
             klientService.save(klient);
             System.out.println("Zaktualizowano dane klienta");
@@ -581,16 +609,14 @@ public class SamochodController {
             System.out.println("Nowe saldo: " + klient.getSaldoPremii() + " zł");
             System.out.println("Nowy procent premii: " + klient.getProcentPremii() + "%");
 
-            // 12. Przygotuj komunikat
             String message;
-            if (rabatProcent.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal zaoszczedzone = cenaBazowa.subtract(cenaZRabatem);
+            if (rabatProcent > 0.0) {
+                // ZMIANA: Nie pokazujemy "zaoszczędzonej" kwoty, bo nie obniżamy ceny
                 message = String.format(
                         "Samochód kupiony!<br>" +
-                                "Zastosowano rabat: <strong>%.0f%%</strong><br>" +
-                                "Zaoszczędziłeś: <strong>%.2f zł</strong><br>" +
-                                "Na Twoje saldo dodano: <strong>%.2f zł</strong> premii",
-                        rabatProcent, zaoszczedzone, naliczonaPremia
+                                "Naliczono premię: <strong>%.2f zł</strong><br>" +
+                                "Twoje saldo: <strong>%.2f zł</strong>",
+                        naliczonaPremia, klient.getSaldoPremii()
                 );
             } else {
                 message = "Samochód kupiony pomyślnie! Zakup zarejestrowany w systemie.";
@@ -602,6 +628,7 @@ public class SamochodController {
         } catch (Exception e) {
             System.err.println("BŁĄD podczas zakupu: " + e.getMessage());
             e.printStackTrace();
+
             redirectAttributes.addFlashAttribute("errorMessage",
                     "Błąd podczas zakupu: " + e.getMessage());
         }
@@ -609,96 +636,64 @@ public class SamochodController {
         return "redirect:/samochody/szczegoly?id=" + id;
     }
 
-    // Poprawiona metoda anulowania rezerwacji
     @PostMapping("/anuluj-rezerwacje")
     @PreAuthorize("isAuthenticated()")
     public String anulujRezerwacje(@RequestParam("id") String id,
                                    Authentication authentication,
                                    RedirectAttributes redirectAttributes) {
         try {
-            System.out.println("=== ANULOWANIE REZERWACJI SAMOCHODU ID: " + id + " ===");
-
-            Samochod samochod = samochodService.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
-
-            System.out.println("Samochód: " + samochod.getMarka() + " " + samochod.getModel());
-            System.out.println("Status: " + samochod.getStatus());
-            System.out.println("Zarezerwowany przez: " +
-                    (samochod.getZarezerwowanyPrzez() != null ?
-                            samochod.getZarezerwowanyPrzez().getId() : "null"));
-
-            // Pobierz aktualnego użytkownika
+            Samochod samochod = getSamochodById(id);
             String username = authentication.getName();
-            User user = userService.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
+            User user = getUserByUsername(username);
+            String klientId = user.getKlientId();
 
-            Klient klient = user.getKlient();
-            if (klient == null) {
+            if (klientId == null) {
                 throw new RuntimeException("Nie masz powiązanego klienta");
             }
 
-            System.out.println("Klient ID: " + klient.getId());
+            Klient klient = getKlientById(klientId);
 
-            // Sprawdź czy samochód jest zarezerwowany i czy to ten klient go zarezerwował
-            if (!"ZAREZERWOWANY".equals(samochod.getStatus())) {
+            // Sprawdź status
+            String status = samochod.getStatus() != null ? samochod.getStatus().trim() : "";
+            if (!status.equalsIgnoreCase("ZAREZERWOWANY")) {
                 String errorMsg = "Samochód nie jest zarezerwowany. Aktualny status: " + samochod.getStatus();
-                System.out.println("BŁĄD: " + errorMsg);
                 redirectAttributes.addFlashAttribute("errorMessage", errorMsg);
                 return "redirect:/samochody/szczegoly?id=" + id;
             }
 
-            if (samochod.getZarezerwowanyPrzez() == null ||
-                    !samochod.getZarezerwowanyPrzez().getId().equals(klient.getId())) {
+            // Sprawdź czy użytkownik jest właścicielem rezerwacji
+            boolean czyRowne = false;
+            if (samochod.getZarezerwowanyPrzezKlientId() != null && klient.getId() != null) {
+                czyRowne = samochod.getZarezerwowanyPrzezKlientId().trim()
+                        .equals(klient.getId().trim());
+            }
+
+            if (samochod.getZarezerwowanyPrzezKlientId() == null || !czyRowne) {
                 String errorMsg = "Ten samochód został zarezerwowany przez innego klienta. " +
                         "Tylko osoba rezerwująca może anulować rezerwację.";
-                System.out.println("BŁĄD: " + errorMsg);
-                System.out.println("Zarezerwowany przez: " +
-                        (samochod.getZarezerwowanyPrzez() != null ?
-                                samochod.getZarezerwowanyPrzez().getId() : "null"));
-                System.out.println("Aktualny klient: " + klient.getId());
-
                 redirectAttributes.addFlashAttribute("errorMessage", errorMsg);
                 return "redirect:/samochody/szczegoly?id=" + id;
             }
 
             // Anuluj rezerwację
             samochod.setStatus("DOSTEPNY");
-            samochod.setZarezerwowanyPrzez(null);
+            samochod.setZarezerwowanyPrzezKlientId(null);
             samochod.setDataRezerwacji(null);
-
             samochodService.save(samochod);
-
-            System.out.println("Rezerwacja anulowana pomyślnie!");
 
             redirectAttributes.addFlashAttribute("successMessage",
                     "Rezerwacja została anulowana. Samochód jest znów dostępny.");
-
             return "redirect:/samochody/szczegoly?id=" + id;
 
         } catch (Exception e) {
             System.err.println("BŁĄD podczas anulowania rezerwacji: " + e.getMessage());
             e.printStackTrace();
-
             redirectAttributes.addFlashAttribute("errorMessage",
                     "Błąd podczas anulowania rezerwacji: " + e.getMessage());
             return "redirect:/samochody/szczegoly?id=" + id;
         }
     }
 
-    // Pomocnicze metody do ekstrakcji imienia i nazwiska z username
-    private String extractFirstName(String username) {
-        if (username == null || username.isEmpty()) return "Użytkownik";
-        String[] parts = username.split("\\.");
-        if (parts.length > 0) return capitalize(parts[0]);
-        return capitalize(username);
-    }
-
-    private String extractLastName(String username) {
-        if (username == null || username.isEmpty()) return "Klient";
-        String[] parts = username.split("\\.");
-        if (parts.length > 1) return capitalize(parts[1]);
-        return "Klient";
-    }
     private boolean isImageUsed(String imageName) {
         if (imageName == null || imageName.isEmpty()) {
             return false;
@@ -713,30 +708,61 @@ public class SamochodController {
         return false;
     }
 
-    private String capitalize(String str) {
-        if (str == null || str.isEmpty()) return str;
-        return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
-    }
+    @GetMapping
+    public String listSamochody(
+            @RequestParam(value = "marka", required = false) String marka,
+            @RequestParam(value = "model", required = false) String model,
+            @RequestParam(value = "status", required = false) String status,
+            Model modelAttribute) {
 
-    /**
-     * Oblicza premię, która zostanie naliczona na saldo klienta
-     */
-    private BigDecimal obliczPremie(BigDecimal cena, BigDecimal procentPremii) {
-        if (procentPremii == null || procentPremii.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
-        }
-        return cena.multiply(procentPremii)
-                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-    }
+        // Pobierz listę samochodów (z filtrami jeśli są)
+        List<Samochod> samochody;
 
-    /**
-     * Oblicza maksymalną kwotę, jaką klient może wykorzystać z salda
-     */
-    private BigDecimal obliczMaksWykorzystanie(BigDecimal saldoKlienta, BigDecimal cenaSamochodu) {
-        if (saldoKlienta == null || saldoKlienta.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
+        if ((marka != null && !marka.isEmpty()) ||
+                (model != null && !model.isEmpty()) ||
+                (status != null && !status.isEmpty())) {
+            // Użyj wyszukiwania z filtrami
+            samochody = samochodService.searchCarsSimple(marka, model, status);
+        } else {
+            // Pobierz wszystkie samochody
+            samochody = samochodService.findAll();
         }
-        // Można wykorzystać maksymalnie tyle, ile wynosi saldo lub cena samochodu
-        return saldoKlienta.min(cenaSamochodu);
+
+        // ZAWSZE upewnij się, że lista nie jest null
+        if (samochody == null) {
+            samochody = new ArrayList<>();
+        }
+
+        // Oblicz statystyki
+        long dostepneCount = samochody.stream()
+                .filter(s -> "DOSTEPNY".equals(s.getStatus()))
+                .count();
+
+        long zarezerwowaneCount = samochody.stream()
+                .filter(s -> "ZAREZERWOWANY".equals(s.getStatus()))
+                .count();
+
+        long sprzedaneCount = samochody.stream()
+                .filter(s -> "SPRZEDANY".equals(s.getStatus()))
+                .count();
+
+        // Pobierz unikalne marki dla filtrowania
+        List<String> marki = samochodService.findAllMarki();
+
+        // Dodaj atrybuty do modelu
+        modelAttribute.addAttribute("samochody", samochody);
+        modelAttribute.addAttribute("marki", marki);
+        modelAttribute.addAttribute("dostepneCount", dostepneCount);
+        modelAttribute.addAttribute("zarezerwowaneCount", zarezerwowaneCount);
+        modelAttribute.addAttribute("sprzedaneCount", sprzedaneCount);
+        modelAttribute.addAttribute("searchMarka", marka);
+        modelAttribute.addAttribute("searchModel", model);
+        modelAttribute.addAttribute("searchStatus", status);
+        modelAttribute.addAttribute("hasSearchParams",
+                (marka != null && !marka.isEmpty()) ||
+                        (model != null && !model.isEmpty()) ||
+                        (status != null && !status.isEmpty()));
+
+        return "samochody/lista";
     }
 }

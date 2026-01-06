@@ -12,6 +12,7 @@ import pl.komis.model.User;
 import pl.komis.repository.KlientRepository;
 import pl.komis.repository.UserRepository;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -83,20 +84,7 @@ public class UserService implements UserDetailsService {
     }
     @Transactional(readOnly = true)
     public List<User> findByKlientId(String klientId) {
-        // Spróbuj obu zapytań, jedno powinno działać
-        try {
-            List<User> users = userRepository.findByKlientId(klientId);
-            if (users != null && !users.isEmpty()) {
-                return users;
-            }
-
-            // Spróbuj alternatywnego zapytania
-            return userRepository.findByKlientId(klientId);
-        } catch (Exception e) {
-            // Jeśli żadna metoda nie działa, zróbrz ręczne zapytanie
-            System.err.println("Błąd w findByKlientId: " + e.getMessage());
-            return Collections.emptyList();
-        }
+        return userRepository.findByKlientId(klientId);
     }
 
     @Transactional
@@ -234,9 +222,9 @@ public class UserService implements UserDetailsService {
         User user = findById(userId)
                 .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
 
-        // Jeśli użytkownik już ma klienta, sprawdź czy klient istnieje w bazie
-        if (user.getKlient() != null) {
-            Optional<Klient> existingKlient = klientRepository.findById(user.getKlient().getId());
+        // Jeśli użytkownik już ma klientId, sprawdź czy klient istnieje
+        if (user.getKlientId() != null) {
+            Optional<Klient> existingKlient = klientRepository.findById(user.getKlientId());
             if (existingKlient.isPresent()) {
                 return existingKlient.get();
             }
@@ -256,15 +244,15 @@ public class UserService implements UserDetailsService {
             klient.setEmail(user.getEmail());
             klient.setTelefon("000000000");
             klient.setLiczbaZakupow(0);
-            klient.setProcentPremii(java.math.BigDecimal.ZERO);
-            klient.setSaldoPremii(java.math.BigDecimal.ZERO);
-            klient.setTotalWydane(java.math.BigDecimal.ZERO);
+            klient.setProcentPremii(0.0);
+            klient.setSaldoPremii(0.0);
+            klient.setTotalWydane(0.0);
 
             klient = klientRepository.save(klient);
         }
 
-        // Przypisz klienta do użytkownika
-        user.setKlient(klient);
+        // Przypisz klientId do użytkownika
+        user.setKlientId(klient.getId());
         userRepository.save(user);
 
         return klient;

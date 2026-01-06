@@ -172,13 +172,13 @@
         <div class="col-md-3">
             <div class="stat-card border-info">
                 <h6><i class="fas fa-wallet"></i> Łączne saldo</h6>
-                <h4 class="text-info" th:text="${'💰 ' + #numbers.formatInteger(totalSaldo, 0, 'WHITESPACE') + ' zł'}"></h4>
+                <h4 class="text-info" th:text="${'💰 ' + #strings.replace(#numbers.formatDecimal(totalSaldo, 0, 'WHITESPACE', 2, 'COMMA'), ',00', '') + ' zł'}"></h4>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card border-warning">
                 <h6><i class="fas fa-money-bill-wave"></i> Łącznie wydano</h6>
-                <h4 class="text-warning" th:text="${#numbers.formatInteger(totalWydane, 0, 'WHITESPACE') + ' zł'}"></h4>
+                <h4 class="text-warning" th:text="${#strings.replace(#numbers.formatDecimal(totalWydane, 0, 'WHITESPACE', 2, 'COMMA'), ',00', '') + ' zł'}"></h4>
             </div>
         </div>
     </div>
@@ -215,24 +215,18 @@
                                 </span>
                         </td>
                         <td>
-                                <span th:text="${klient.procentPremii} + '%'"
+                                <span th:text="${klient.procentPremii == 0 ? '0%' : (klient.procentPremii + '%')}"
                                       class="badge"
                                       th:class="${klient.procentPremii > 0} ? 'bg-success' : 'bg-secondary'">
                                 </span>
                         </td>
                         <td>
-                                <span th:with="saldoInteger=${klient.saldoPremii.stripTrailingZeros().scale() <= 0}"
-                                      th:text="${saldoInteger} ?
-                                    ${#numbers.formatInteger(klient.saldoPremii, 0, 'WHITESPACE') + ' zł'} :
-                                    ${#numbers.formatDecimal(klient.saldoPremii, 0, 'WHITESPACE', 2, 'COMMA') + ' zł'}"
+                                <span th:text="${#strings.replace(#numbers.formatDecimal(klient.saldoPremii, 0, 'WHITESPACE', 2, 'COMMA'), ',00', '') + ' zł'}"
                                       class="badge"
                                       th:class="${klient.saldoPremii > 0} ? 'bg-info' : 'bg-secondary'">
                                 </span>
                         </td>
-                        <td th:with="wydaneInteger=${klient.totalWydane.stripTrailingZeros().scale() <= 0}"
-                            th:text="${wydaneInteger} ?
-                                ${#numbers.formatInteger(klient.totalWydane, 0, 'WHITESPACE') + ' zł'} :
-                                ${#numbers.formatDecimal(klient.totalWydane, 0, 'WHITESPACE', 2, 'COMMA') + ' zł'}">
+                        <td th:text="${#strings.replace(#numbers.formatDecimal(klient.totalWydane, 0, 'WHITESPACE', 2, 'COMMA'), ',00', '') + ' zł'}">
                         </td>
                         <td>
                             <!-- Zmienione: przyciski poziomo bez btn-group -->

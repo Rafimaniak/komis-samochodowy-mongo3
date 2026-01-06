@@ -1,17 +1,12 @@
-// src\main\java\pl\komis\controller\SearchController.java
-
 package pl.komis.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import pl.komis.model.Samochod;
 import pl.komis.service.SamochodService;
+import pl.komis.dto.SearchCriteria;
 
 import java.util.List;
 
@@ -23,85 +18,62 @@ public class SearchController {
     private final SamochodService samochodService;
 
     @GetMapping
-    public String showSearchForm(Model model) {
-        model.addAttribute("searchCriteria", new SamochodService.SearchCriteria());
+    public String searchPage(Model model) {
         model.addAttribute("marki", samochodService.findAllMarki());
-        model.addAttribute("tytul", "Zaawansowane wyszukiwanie");
-        return "search/form";
+        model.addAttribute("searchCriteria", new SearchCriteria());
+        return "search/form";  // ZMIANA: Zwraca search/form zamiast samochody/lista
     }
 
     @PostMapping
-    public String searchCars(@ModelAttribute SamochodService.SearchCriteria criteria, Model model) {
-        List<Samochod> results = samochodService.searchCars(criteria);
+    public String search(@ModelAttribute SearchCriteria criteria, Model model) {
+        // Użyj metody z SamochodService
+        List<Samochod> wyniki = samochodService.searchCars(criteria);
 
-        // DEBUG
-        System.out.println("DEBUG Zaawansowane wyszukiwanie:");
-        System.out.println("DEBUG - Marka: " + criteria.getMarka());
-        System.out.println("DEBUG - Model: " + criteria.getModel());
-        System.out.println("DEBUG - Status: " + criteria.getStatus());
-        System.out.println("DEBUG - Min rok: " + criteria.getMinRok());
-        System.out.println("DEBUG - Max rok: " + criteria.getMaxRok());
-        System.out.println("DEBUG - Wyniki: " + results.size() + " samochodów");
-
-        model.addAttribute("searchCriteria", criteria);
-        model.addAttribute("samochody", results);
+        model.addAttribute("samochody", wyniki);
         model.addAttribute("marki", samochodService.findAllMarki());
-        model.addAttribute("tytul", "Wyniki wyszukiwania");
-        model.addAttribute("resultsCount", results.size());
+        model.addAttribute("searchCriteria", criteria);
+        model.addAttribute("resultsCount", wyniki != null ? wyniki.size() : 0);  // DODAJ: resultsCount
 
         return "search/results";
     }
 
-    // DODAJ TĘ METODĘ DLA WYSZUKIWANIA GET
-    @GetMapping("/results")
-    public String searchCarsGet(
+    @GetMapping("/simple")
+    public String searchSimple(
             @RequestParam(required = false) String marka,
             @RequestParam(required = false) String model,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) Integer minRok,
-            @RequestParam(required = false) Integer maxRok,
-            @RequestParam(required = false) Integer minPrzebieg,
-            @RequestParam(required = false) Integer maxPrzebieg,
-            @RequestParam(required = false) String rodzajPaliwa,
-            Model modelAttr) {
+            Model modelView) {
 
-        SamochodService.SearchCriteria criteria = new SamochodService.SearchCriteria();
-        criteria.setMarka(marka);
-        criteria.setModel(model);
-        criteria.setStatus(status);
-        criteria.setMinRok(minRok);
-        criteria.setMaxRok(maxRok);
-        criteria.setMinPrzebieg(minPrzebieg);
-        criteria.setMaxPrzebieg(maxPrzebieg);
-        criteria.setRodzajPaliwa(rodzajPaliwa);
+        List<Samochod> wyniki = samochodService.searchCarsSimple(marka, model, status);
 
-        List<Samochod> results = samochodService.searchCars(criteria);
+        // Utwórz obiekt SearchCriteria dla szablonu
+        SearchCriteria searchCriteria = new SearchCriteria();
+        searchCriteria.setMarka(marka);
+        searchCriteria.setModel(model);
+        searchCriteria.setStatus(status);
 
-        modelAttr.addAttribute("searchCriteria", criteria);
-        modelAttr.addAttribute("samochody", results);
-        modelAttr.addAttribute("marki", samochodService.findAllMarki());
-        modelAttr.addAttribute("tytul", "Wyniki wyszukiwania");
-        modelAttr.addAttribute("resultsCount", results.size());
+        modelView.addAttribute("samochody", wyniki);
+        modelView.addAttribute("marki", samochodService.findAllMarki());
+        modelView.addAttribute("resultsCount", wyniki != null ? wyniki.size() : 0);
+        modelView.addAttribute("searchCriteria", searchCriteria); // DODAJ TO!
 
         return "search/results";
     }
-
     @GetMapping("/quick")
-    public String quickSearch(
+    public String searchQuick(
             @RequestParam(required = false) String marka,
             @RequestParam(required = false) String model,
             @RequestParam(required = false) String status,
-            Model modelAttr) {
+            Model modelView) {
 
-        List<Samochod> results = samochodService.searchCarsSimple(marka, model, status);
+        List<Samochod> wyniki = samochodService.searchCarsSimple(marka, model, status);
 
-        modelAttr.addAttribute("samochody", results);
-        modelAttr.addAttribute("marki", samochodService.findAllMarki());
-        modelAttr.addAttribute("tytul", "Szybkie wyszukiwanie");
-        modelAttr.addAttribute("resultsCount", results.size());
-        modelAttr.addAttribute("searchMarka", marka);
-        modelAttr.addAttribute("searchModel", model);
-        modelAttr.addAttribute("searchStatus", status);
+        modelView.addAttribute("samochody", wyniki);
+        modelView.addAttribute("marki", samochodService.findAllMarki());
+        modelView.addAttribute("resultsCount", wyniki != null ? wyniki.size() : 0);
+        modelView.addAttribute("searchMarka", marka);
+        modelView.addAttribute("searchModel", model);
+        modelView.addAttribute("searchStatus", status);
 
         return "search/quick-results";
     }

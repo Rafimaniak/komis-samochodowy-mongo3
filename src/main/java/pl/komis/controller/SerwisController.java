@@ -30,7 +30,7 @@ public class SerwisController {
         List<Serwis> serwisy = serwisService.findAll();
         long zarezerwowane = serwisService.countZarezerwowane();
         long zakonczone = serwisService.countZakonczone();
-        BigDecimal lacznyKoszt = serwisService.getTotalKoszt();
+        Double lacznyKoszt = serwisService.getTotalKoszt();
 
         // DODANE: Mapa samochodów i pracowników do wyświetlania nazw
         model.addAttribute("serwisy", serwisy);
@@ -155,7 +155,7 @@ public class SerwisController {
     // NOWA METODA: Obsługa zakończenia serwisu
     @PostMapping("/zakoncz/{id}")
     public String zakonczSerwis(@PathVariable String id,
-                                @RequestParam BigDecimal koszt,
+                                @RequestParam Double koszt,
                                 RedirectAttributes redirectAttributes) {
         try {
             serwisService.zakonczSerwis(id, koszt);

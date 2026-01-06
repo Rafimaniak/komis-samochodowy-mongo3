@@ -1,293 +1,230 @@
 package pl.komis.service;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import pl.komis.model.*;
 import pl.komis.repository.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.time.ZoneId;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Slf4j
 public class ZakupService {
 
     private final ZakupRepository zakupRepository;
-    private final KlientRepository klientRepository;
+    private final KlientService klientService;
     private final SamochodService samochodService;
     private final PracownikService pracownikService;
-    private final UserService userService;
-    private final MongoTemplate mongoTemplate;
+    private final MongoDBFunctionService mongoDBFunctionService;
 
-    @Transactional
-    public Zakup createZakupZSaldem(String samochodId, String userId, String pracownikId,
-                                    BigDecimal cenaBazowa, BigDecimal wykorzystaneSaldo) {
-
-        Samochod samochod = samochodService.findById(samochodId)
-                .orElseThrow(() -> new RuntimeException("Samochód nie znaleziony"));
-
-        User user = userService.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Użytkownik nie znaleziony"));
-
-        Klient klient = user.getKlient();
-        if (klient == null) {
-            throw new RuntimeException("Użytkownik nie ma powiązanego klienta");
-        }
-
-        Pracownik pracownik = pracownikService.findById(pracownikId)
-                .orElseThrow(() -> new RuntimeException("Pracownik nie znaleziony"));
-
-        if (wykorzystaneSaldo != null && wykorzystaneSaldo.compareTo(cenaBazowa) > 0) {
-            throw new RuntimeException("Wykorzystane saldo nie może przekraczać ceny samochodu");
-        }
-
-        BigDecimal faktycznieWykorzystane = (wykorzystaneSaldo != null) ? wykorzystaneSaldo : BigDecimal.ZERO;
-        if (faktycznieWykorzystane.compareTo(BigDecimal.ZERO) > 0) {
-            if (klient.getSaldoPremii() == null ||
-                    klient.getSaldoPremii().compareTo(faktycznieWykorzystane) < 0) {
-                throw new RuntimeException("Niewystarczające saldo premii. Masz: " +
-                        klient.getSaldoPremii() + " zł, a potrzebujesz: " +
-                        faktycznieWykorzystane + " zł");
-            }
-        }
-
-        BigDecimal rabatProcent = klient.getProcentPremii() != null ? klient.getProcentPremii() : BigDecimal.ZERO;
-        BigDecimal cenaPoRabacie = cenaBazowa;
-        if (rabatProcent.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal mnoznikRabatu = BigDecimal.ONE
-                    .subtract(rabatProcent.divide(new BigDecimal("100"), 2, BigDecimal.ROUND_HALF_UP));
-            cenaPoRabacie = cenaBazowa.multiply(mnoznikRabatu).setScale(2, BigDecimal.ROUND_HALF_UP);
-        }
-
-        BigDecimal cenaOstateczna = cenaPoRabacie.subtract(faktycznieWykorzystane);
-
-        BigDecimal naliczonaPremia = BigDecimal.ZERO;
-        if (rabatProcent.compareTo(BigDecimal.ZERO) > 0) {
-            naliczonaPremia = cenaBazowa.multiply(rabatProcent)
-                    .divide(new BigDecimal("100"), 2, BigDecimal.ROUND_HALF_UP);
-        }
-
-        samochod.setStatus("SPRZEDANY");
-        samochod.setZarezerwowanyPrzez(null);
-        samochod.setDataRezerwacji(null);
-        samochodService.save(samochod);
-
-        klient.setLiczbaZakupow(klient.getLiczbaZakupow() + 1);
-        klient.setTotalWydane(klient.getTotalWydane().add(cenaOstateczna));
-        klient.setSaldoPremii(klient.getSaldoPremii().subtract(faktycznieWykorzystane).add(naliczonaPremia));
-
-        if (klient.getLiczbaZakupow() >= 5) {
-            klient.setProcentPremii(new BigDecimal("15"));
-        } else if (klient.getLiczbaZakupow() >= 3) {
-            klient.setProcentPremii(new BigDecimal("10"));
-        } else if (klient.getLiczbaZakupow() >= 2) {
-            klient.setProcentPremii(new BigDecimal("5"));
-        } else {
-            klient.setProcentPremii(BigDecimal.ZERO);
-        }
-
-        klientRepository.save(klient);
-
-        Zakup zakup = Zakup.builder()
-                .samochod(samochod)
-                .klient(klient)
-                .pracownik(pracownik)
-                .dataZakupu(LocalDate.now())
-                .cenaBazowa(cenaBazowa)
-                .cenaZakupu(cenaOstateczna)
-                .zastosowanyRabat(rabatProcent)
-                .naliczonaPremia(naliczonaPremia)
-                .wykorzystaneSaldo(faktycznieWykorzystane)
-                .build();
-
-        return zakupRepository.save(zakup);
-    }
-
-    @Transactional(readOnly = true)
-    public List<Zakup> findAll() {
-        return zakupRepository.findAll();
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<Zakup> findById(String id) {
-        return zakupRepository.findById(id);
-    }
-
-    @Transactional(readOnly = true)
-    public Zakup getById(String id) {
-        return zakupRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Zakup nie znaleziony"));
-    }
-
-    @Transactional(readOnly = true)
-    public List<Zakup> findByKlientId(String klientId) {
-        System.out.println("DEBUG: Szukam zakupów dla klienta ID: " + klientId);
-
-        if (klientId == null || klientId.trim().isEmpty()) {
-            System.out.println("DEBUG: klientId jest null lub pusty");
-            return Collections.emptyList();
-        }
-
-        try {
-            // Spróbuj obu metod
-            List<Zakup> zakupy = null;
-
-            // Metoda 1: z @Query
-            try {
-                zakupy = zakupRepository.findByKlientId(klientId);
-                System.out.println("DEBUG: Metoda @Query: znaleziono " + zakupy.size() + " zakupów");
-            } catch (Exception e) {
-                System.err.println("DEBUG: Błąd metody @Query: " + e.getMessage());
-            }
-
-            // Metoda 2: bez @Query (jeśli pierwsza nie działa)
-            if (zakupy == null || zakupy.isEmpty()) {
-                try {
-                    zakupy = zakupRepository.findByKlient_Id(klientId);
-                    System.out.println("DEBUG: Metoda findByKlient_Id: znaleziono " + zakupy.size() + " zakupów");
-                } catch (Exception e) {
-                    System.err.println("DEBUG: Błąd metody findByKlient_Id: " + e.getMessage());
-                }
-            }
-
-            // Metoda 3: ręczne zapytanie przez MongoTemplate
-            if (zakupy == null || zakupy.isEmpty()) {
-                try {
-                    Query query = new Query(Criteria.where("klient.$id").is(klientId));
-                    zakupy = mongoTemplate.find(query, Zakup.class);
-                    System.out.println("DEBUG: Metoda MongoTemplate: znaleziono " + zakupy.size() + " zakupów");
-                } catch (Exception e) {
-                    System.err.println("DEBUG: Błąd metody MongoTemplate: " + e.getMessage());
-                }
-            }
-
-            if (zakupy == null) {
-                zakupy = Collections.emptyList();
-            }
-
-            System.out.println("DEBUG: Łącznie znaleziono " + zakupy.size() + " zakupów");
-
-            // Dla debugowania - wypisz szczegóły
-            for (Zakup zakup : zakupy) {
-                System.out.println("Zakup ID: " + zakup.getId() +
-                        ", Data: " + zakup.getDataZakupu() +
-                        ", Samochód: " + (zakup.getSamochod() != null ?
-                        zakup.getSamochod().getMarka() + " " + zakup.getSamochod().getModel() : "null") +
-                        ", Cena: " + zakup.getCenaZakupu());
-            }
-
-            return zakupy;
-
-        } catch (Exception e) {
-            System.err.println("Błąd w findByKlientId: " + e.getMessage());
-            e.printStackTrace();
-            return Collections.emptyList();
-        }
-    }
-
-    @Transactional(readOnly = true)
-    public List<Zakup> findByPracownikId(String id) {
-        return zakupRepository.findByPracownikId(id);
-    }
-
-    @Transactional(readOnly = true)
-    public List<Zakup> findByDateRange(LocalDate od, LocalDate do_) {
-        return zakupRepository.findByDataZakupuBetween(od, do_);
-    }
-
-    @Transactional
     public Zakup save(Zakup zakup) {
         return zakupRepository.save(zakup);
     }
 
-    @Transactional
-    public void remove(String id) {
+    // POPRAWIONA METODA - teraz nalicza premię i aktualizuje klienta
+    public String createZakupZSaldem(String samochodId, String klientId, String pracownikId,
+                                     Double cenaBazowa, Double wykorzystaneSaldo) {
         try {
-            zakupRepository.deleteById(id);
+            // 1. Pobierz klienta
+            Klient klient = klientService.findById(klientId)
+                    .orElseThrow(() -> new RuntimeException("Klient nie znaleziony"));
+
+            // 2. Pobierz samochód (dla danych)
+            Samochod samochod = (Samochod) samochodService.findById(samochodId);
+            if (samochod == null) {
+                throw new RuntimeException("Samochód nie znaleziony");
+            }
+
+            // 3. Pobierz pracownika (dla danych)
+            Pracownik pracownik = pracownikService.findById(pracownikId)
+                    .orElseThrow(() -> new RuntimeException("Pracownik nie znaleziony"));
+
+            // 4. Oblicz rabat i premię (na podstawie STARYCH danych klienta)
+            Double staryRabatProcent = klient.getProcentPremii() != null ?
+                    klient.getProcentPremii() : 0.0;
+
+            Double naliczonaPremia = 0.0;
+            if (staryRabatProcent > 0.0) {
+                naliczonaPremia = cenaBazowa * (staryRabatProcent / 100.0);
+                naliczonaPremia = Math.round(naliczonaPremia * 100.0) / 100.0;
+            }
+
+            // 5. Oblicz cenę końcową (po odjęciu wykorzystanego salda)
+            Double cenaKoncowa = cenaBazowa - wykorzystaneSaldo;
+            cenaKoncowa = Math.round(cenaKoncowa * 100.0) / 100.0;
+
+            // 6. Aktualizuj klienta (ZWIĘKSZ saldo o naliczoną premię, ODEJMIJ wykorzystane saldo)
+            // Najpierw odejmij wykorzystane saldo
+            if (wykorzystaneSaldo > 0) {
+                if (klient.getSaldoPremii() < wykorzystaneSaldo) {
+                    throw new RuntimeException("Niewystarczające saldo premii");
+                }
+                klient.setSaldoPremii(klient.getSaldoPremii() - wykorzystaneSaldo);
+            }
+
+            // Następnie dodaj naliczoną premię
+            klient.setSaldoPremii(klient.getSaldoPremii() + naliczonaPremia);
+
+            // Zwiększ liczbę zakupów i totalWydane
+            klient.setLiczbaZakupow(klient.getLiczbaZakupow() + 1);
+            klient.setTotalWydane(klient.getTotalWydane() + cenaKoncowa);
+
+            // Aktualizuj procent premii na podstawie NOWEJ liczby zakupów
+            if (klient.getLiczbaZakupow() >= 5) {
+                klient.setProcentPremii(15.0);
+            } else if (klient.getLiczbaZakupow() >= 3) {
+                klient.setProcentPremii(10.0);
+            } else if (klient.getLiczbaZakupow() >= 2) {
+                klient.setProcentPremii(5.0);
+            } else {
+                klient.setProcentPremii(0.0);
+            }
+
+            // Zapisz zaktualizowanego klienta
+            klientService.save(klient);
+
+            // 7. Stwórz zakup z kompletnymi danymi
+            Zakup zakup = Zakup.builder()
+                    .samochodId(samochodId)
+                    .klientId(klientId)
+                    .pracownikId(pracownikId)
+                    .samochodMarka(samochod.getMarka())
+                    .samochodModel(samochod.getModel())
+                    .klientImieNazwisko(klient.getImie() + " " + klient.getNazwisko())
+                    .pracownikImieNazwisko(pracownik.getImie() + " " + pracownik.getNazwisko())
+                    .dataZakupu(LocalDate.now())
+                    .cenaBazowa(cenaBazowa)
+                    .cenaZakupu(cenaKoncowa)
+                    .zastosowanyRabat(staryRabatProcent) // Stary procent premii
+                    .naliczonaPremia(naliczonaPremia)     // Naliczona premia
+                    .wykorzystaneSaldo(wykorzystaneSaldo)
+                    .build();
+
+            Zakup saved = zakupRepository.save(zakup);
+            return saved.getId();
+
         } catch (Exception e) {
-            throw new RuntimeException("Błąd podczas usuwania zakupu: " + e.getMessage(), e);
+            log.error("Błąd przy tworzeniu zakupu z wykorzystaniem salda", e);
+            throw new RuntimeException("Błąd przy tworzeniu zakupu: " + e.getMessage(), e);
         }
     }
 
-    @Transactional
-    public void delete(String id) {
-        remove(id);
+    // Statystyki z MongoDB
+    public Map<String, Object> getStatystykiZakupow() {
+        return mongoDBFunctionService.getStatystykiZakupow();
     }
 
-    @Transactional(readOnly = true)
-    public BigDecimal pobierzSaldoKlienta(String klientId) {
-        Klient klient = klientRepository.findById(klientId)
-                .orElseThrow(() -> new RuntimeException("Klient nie znaleziony"));
-        return klient.getSaldoPremii();
-    }
+    public Map<String, Object> getStatystykiKlienta(String klientId) {
+        Map<String, Object> statystyki = new HashMap<>();
 
-    @Transactional(readOnly = true)
-    public boolean czyMozeWykorzystacSaldo(String klientId, BigDecimal kwota) {
-        if (kwota == null || kwota.compareTo(BigDecimal.ZERO) <= 0) {
-            return false;
+        try {
+            List<Zakup> zakupy = zakupRepository.findByKlientId(klientId);
+
+            Double sumaCenaBazowa = zakupy.stream()
+                    .map(z -> z.getCenaBazowa() != null ? z.getCenaBazowa() : 0.0)
+                    .reduce(0.0, Double::sum);
+
+            Double sumaCenaZakupu = zakupy.stream()
+                    .map(z -> z.getCenaZakupu() != null ? z.getCenaZakupu() : 0.0)
+                    .reduce(0.0, Double::sum);
+
+            Double sumaWykorzystaneSaldo = zakupy.stream()
+                    .map(z -> z.getWykorzystaneSaldo() != null ? z.getWykorzystaneSaldo() : 0.0)
+                    .reduce(0.0, Double::sum);
+
+            Double sumaNaliczonaPremia = zakupy.stream()
+                    .map(z -> z.getNaliczonaPremia() != null ? z.getNaliczonaPremia() : 0.0)
+                    .reduce(0.0, Double::sum);
+
+            statystyki.put("liczbaZakupow", zakupy.size());
+            statystyki.put("sumaCenaBazowa", sumaCenaBazowa);
+            statystyki.put("sumaCenaZakupu", sumaCenaZakupu);
+            statystyki.put("sumaWykorzystaneSaldo", sumaWykorzystaneSaldo);
+            statystyki.put("sumaNaliczonaPremia", sumaNaliczonaPremia);
+
+        } catch (Exception e) {
+            statystyki.put("error", "Błąd podczas pobierania statystyk: " + e.getMessage());
         }
 
-        Klient klient = klientRepository.findById(klientId)
-                .orElseThrow(() -> new RuntimeException("Klient nie znaleziony"));
-
-        return klient.getSaldoPremii() != null &&
-                klient.getSaldoPremii().compareTo(kwota) >= 0;
+        return statystyki;
     }
 
-    @Transactional(readOnly = true)
-    public BigDecimal getSumaWydatkowKlienta(String klientId) {
-        List<Zakup> zakupy = findByKlientId(klientId);
-        return zakupy.stream()
-                .map(Zakup::getCenaZakupu)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    public List<Map<String, Object>> getMiesieczneStatystyki() {
+        List<Map<String, Object>> statystyki = new ArrayList<>();
+
+        try {
+            // Przykładowa agregacja miesięczna
+            Calendar calendar = Calendar.getInstance();
+            List<Zakup> zakupy = zakupRepository.findAll();
+
+            Map<String, Map<String, Object>> miesiaceMap = new HashMap<>();
+
+            for (Zakup zakup : zakupy) {
+                if (zakup.getDataZakupu() != null) {
+                    // Konwersja LocalDate na Date
+                    Date date = Date.from(zakup.getDataZakupu()
+                            .atStartOfDay(ZoneId.systemDefault())
+                            .toInstant());
+                    calendar.setTime(date);
+                    String klucz = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1);
+
+                    miesiaceMap.putIfAbsent(klucz, new HashMap<>());
+                    Map<String, Object> miesiac = miesiaceMap.get(klucz);
+
+                    miesiac.put("miesiac", klucz);
+
+                    // Pobierz aktualne wartości
+                    Double sumaCena = miesiac.containsKey("sumaCena") ?
+                            (Double) miesiac.get("sumaCena") : 0.0;
+                    int liczba = miesiac.containsKey("liczbaZakupow") ?
+                            (int) miesiac.get("liczbaZakupow") : 0;
+
+                    // Zaktualizuj
+                    sumaCena += (zakup.getCenaZakupu() != null ?
+                            zakup.getCenaZakupu() : 0.0);
+                    liczba++;
+
+                    // Zapisz z powrotem
+                    miesiac.put("sumaCena", sumaCena);
+                    miesiac.put("liczbaZakupow", liczba);
+                }
+            }
+
+            // Konwertuj mapę na listę
+            statystyki = new ArrayList<>(miesiaceMap.values());
+
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Błąd podczas pobierania statystyk: " + e.getMessage());
+            statystyki.add(error);
+        }
+
+        return statystyki;
     }
 
-    @Transactional(readOnly = true)
-    public BigDecimal getSumaWykorzystanegoSaldaKlienta(String klientId) {
-        List<Zakup> zakupy = findByKlientId(klientId);
-        return zakupy.stream()
-                .map(Zakup::getWykorzystaneSaldo)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    // Reszta metod do odczytu
+    public List<Zakup> findAll() {
+        return zakupRepository.findAll();
     }
 
-    @Transactional(readOnly = true)
-    public int getLiczbaZakupowKlienta(String klientId) {
-        List<Zakup> zakupy = findByKlientId(klientId);
-        return zakupy.size();
+    public Optional<Zakup> findById(String id) {
+        return zakupRepository.findById(id);
     }
 
-    @Transactional(readOnly = true)
+    public List<Zakup> findByKlientId(String klientId) {
+        return zakupRepository.findByKlientId(klientId);
+    }
+
+    public void remove(String id) {
+        zakupRepository.deleteById(id);
+    }
+
+    // Proste metody nadal w Javie
     public boolean isSamochodKupiony(String samochodId) {
         return zakupRepository.existsBySamochodId(samochodId);
-    }
-
-    @Transactional(readOnly = true)
-    public boolean isSamochodKupionyPrzezKlienta(String samochodId, String klientId) {
-        return zakupRepository.existsBySamochodIdAndKlientId(samochodId, klientId);
-    }
-
-    // METODA POMOCNICZA DO ŁADOWANIA ZAKUPÓW Z REFERENCJAMI
-    @Transactional(readOnly = true)
-    public List<Zakup> findZakupyKlientaZReferencjami(String klientId) {
-        List<Zakup> zakupy = zakupRepository.findByKlientId(klientId);
-
-        // Załaduj referencje dla każdego zakupu
-        for (Zakup zakup : zakupy) {
-            if (zakup.getSamochod() != null && zakup.getSamochod().getId() != null) {
-                // Pobierz pełny obiekt samochodu
-                Samochod samochod = samochodService.findById(zakup.getSamochod().getId()).orElse(null);
-                zakup.setSamochod(samochod);
-            }
-        }
-
-        return zakupy;
     }
 }

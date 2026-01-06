@@ -41,22 +41,22 @@ public class KlientService {
                 .orElse(0);
     }
 
-    public BigDecimal getSaldoPremii(String klientId) {
+    public Double getSaldoPremii(String klientId) {
         return klientRepository.findKlientById(klientId)
                 .map(Klient::getSaldoPremii)
-                .orElse(BigDecimal.ZERO);
+                .orElse(0.0);
     }
 
-    public BigDecimal getProcentPremii(String klientId) {
+    public Double getProcentPremii(String klientId) {
         return klientRepository.findKlientById(klientId)
                 .map(Klient::getProcentPremii)
-                .orElse(BigDecimal.ZERO);
+                .orElse(0.0);
     }
 
-    public BigDecimal getTotalWydane(String klientId) {
+    public Double getTotalWydane(String klientId) {
         return klientRepository.findKlientById(klientId)
                 .map(Klient::getTotalWydane)
-                .orElse(BigDecimal.ZERO);
+                .orElse(0.0);
     }
 
     public void naprawSaldo(String klientId) {

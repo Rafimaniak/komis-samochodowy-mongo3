@@ -92,18 +92,14 @@ public class FixDuplicatesController {
 
                         // Dodaj zakupy, saldo, etc.
                         mainClient.setLiczbaZakupow(mainClient.getLiczbaZakupow() + duplicate.getLiczbaZakupow());
-                        mainClient.setSaldoPremii(mainClient.getSaldoPremii().add(
-                                duplicate.getSaldoPremii() != null ? duplicate.getSaldoPremii() : BigDecimal.ZERO
-                        ));
-                        mainClient.setTotalWydane(mainClient.getTotalWydane().add(
-                                duplicate.getTotalWydane() != null ? duplicate.getTotalWydane() : BigDecimal.ZERO
-                        ));
+                        mainClient.setSaldoPremii(mainClient.getSaldoPremii()+(duplicate.getSaldoPremii() != null ? duplicate.getSaldoPremii() : 0.0));
+                        mainClient.setTotalWydane(mainClient.getTotalWydane()+(duplicate.getTotalWydane() != null ? duplicate.getTotalWydane() : 0.0));
 
                         // Znajdź użytkowników powiązanych z duplikatem i zaktualizuj ich
                         try {
                             List<User> usersWithDuplicate = userService.findByKlientId(duplicate.getId());
                             for (User user : usersWithDuplicate) {
-                                user.setKlient(mainClient);
+                                user.setKlientId(mainClient.getId());
                                 userService.saveUser(user);
                                 usersUpdated++;
                             }

@@ -3,7 +3,7 @@ package pl.komis.model;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Field;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
@@ -13,40 +13,51 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder(toBuilder = true)
 public class Zakup {
-
     @Id
     private String id;
 
-    @DBRef
-    private Samochod samochod;
+    @Field("samochod_id")
+    private String samochodId;
 
-    @DBRef
-    private Klient klient;
+    @Field("klient_id")
+    private String klientId;
 
-    @DBRef
-    private Pracownik pracownik;
+    @Field("pracownik_id")
+    private String pracownikId;
+
+    @Field("samochod_marka")
+    private String samochodMarka;
+
+    @Field("samochod_model")
+    private String samochodModel;
+
+    @Field("klient_imie_nazwisko")
+    private String klientImieNazwisko;
+
+    @Field("pracownik_imie_nazwisko")
+    private String pracownikImieNazwisko;
 
     private LocalDate dataZakupu;
-    private BigDecimal cenaZakupu;
-    private BigDecimal cenaBazowa;
+    private Double cenaZakupu;
+    private Double cenaBazowa;
 
     @Builder.Default
-    private BigDecimal zastosowanyRabat = BigDecimal.ZERO;
+    private Double zastosowanyRabat = 0.0;
 
     @Builder.Default
-    private BigDecimal naliczonaPremia = BigDecimal.ZERO;
+    private Double naliczonaPremia = 0.0;
 
     @Builder.Default
-    private BigDecimal wykorzystaneSaldo = BigDecimal.ZERO;
+    private Double wykorzystaneSaldo = 0.0;
 
-    public BigDecimal getZaoszczedzonaKwota() {
+    public Double getZaoszczedzonaKwota() {
         if (cenaBazowa != null && cenaZakupu != null) {
-            return cenaBazowa.subtract(cenaZakupu);
+            return cenaBazowa-cenaZakupu;
         }
-        return BigDecimal.ZERO;
+        return 0.0;
     }
 
     public boolean czyWykorzystanoSaldo() {
-        return wykorzystaneSaldo != null && wykorzystaneSaldo.compareTo(BigDecimal.ZERO) > 0;
+        return wykorzystaneSaldo != null && wykorzystaneSaldo.compareTo(0.0) > 0;
     }
 }

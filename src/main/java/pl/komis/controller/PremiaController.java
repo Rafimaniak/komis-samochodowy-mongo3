@@ -38,10 +38,10 @@ public class PremiaController {
             }
 
             // Pobierz aktualne dane klienta
-            BigDecimal saldo = klient.getSaldoPremii() != null ? klient.getSaldoPremii() : BigDecimal.ZERO;
-            BigDecimal procentPremii = klient.getProcentPremii() != null ? klient.getProcentPremii() : BigDecimal.ZERO;
+            Double saldo = klient.getSaldoPremii() != null ? klient.getSaldoPremii() : 0.0;
+            Double procentPremii = klient.getProcentPremii() != null ? klient.getProcentPremii() : 0.0;
             Integer liczbaZakupow = klient.getLiczbaZakupow() != null ? klient.getLiczbaZakupow() : 0;
-            BigDecimal totalWydane = klient.getTotalWydane() != null ? klient.getTotalWydane() : BigDecimal.ZERO;
+            Double totalWydane = klient.getTotalWydane() != null ? klient.getTotalWydane() : 0.0;
 
             model.addAttribute("klient", klient);
             model.addAttribute("saldo", saldo);

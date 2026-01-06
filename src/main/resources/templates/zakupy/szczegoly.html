@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Szczegóły zakupu - Admin</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            padding-top: 70px;
+            background-color: #f8f9fa;
+        }
+        .navbar-custom {
+            background-color: #343a40 !important;
+        }
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .detail-row {
+            border-bottom: 1px solid #dee2e6;
+            padding: 10px 0;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top navbar-custom">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+            <i class="fas fa-car"></i> Komis Samochodowy
+        </a>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav" sec:authorize="hasRole('ADMIN')">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/admin}"><i class="fas fa-tachometer-alt"></i> Panel Admina</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/zakupy}"><i class="fas fa-shopping-cart"></i> Wszystkie zakupy</a>
+                </li>
+            </ul>
+            <ul class="navbar-nav ms-auto" sec:authorize="isAuthenticated()">
+                <li class="nav-item">
+                    <span class="navbar-text me-3">
+                        <i class="fas fa-user"></i> <span sec:authentication="name"></span>
+                    </span>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/logout}">
+                        <i class="fas fa-sign-out-alt"></i> Wyloguj
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a th:href="@{/zakupy}">Wszystkie zakupy</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Szczegóły zakupu</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-file-invoice-dollar"></i> Szczegóły zakupu</h4>
+                </div>
+                <div class="card-body">
+                    <div th:if="${zakup == null}" class="alert alert-danger">
+                        Zakup nie znaleziony!
+                    </div>
+
+                    <div th:if="${zakup != null}">
+                        <div class="detail-row">
+                            <strong>ID zakupu:</strong>
+                            <div class="text-muted"><small th:text="${zakup.id}"></small></div>
+                        </div>
+
+                        <div class="detail-row">
+                            <strong>Samochód:</strong>
+                            <div>
+                                <span th:text="${zakup.samochodMarka + ' ' + zakup.samochodModel}"></span>
+                                <br>
+                                <small class="text-muted">ID samochodu: <span th:text="${zakup.samochodId}"></span></small>
+                            </div>
+                        </div>
+
+                        <div class="detail-row">
+                            <strong>Klient:</strong>
+                            <div th:text="${zakup.klientImieNazwisko} ?: 'Brak danych'"></div>
+                        </div>
+
+                        <div class="detail-row">
+                            <strong>Pracownik:</strong>
+                            <div th:text="${zakup.pracownikImieNazwisko} ?: 'Brak danych'"></div>
+                        </div>
+
+                        <div class="detail-row">
+                            <strong>Data zakupu:</strong>
+                            <div th:text="${zakup.dataZakupu != null ? #temporals.format(zakup.dataZakupu, 'dd.MM.yyyy') : 'Brak'}"></div>
+                        </div>
+
+                        <div class="detail-row">
+                            <strong>Cena bazowa:</strong>
+                            <div class="text-muted" th:text="${zakup.cenaBazowa != null ? #numbers.formatDecimal(zakup.cenaBazowa, 0, 2, 'POINT') + ' zł' : 'Brak'}"></div>
+                        </div>
+
+                        <div class="detail-row">
+                            <strong>Cena zakupu:</strong>
+                            <div class="text-success fw-bold" th:text="${zakup.cenaZakupu != null ? #numbers.formatDecimal(zakup.cenaZakupu, 0, 2, 'POINT') + ' zł' : 'Brak'}"></div>
+                        </div>
+
+                        <div class="detail-row">
+                            <strong>Rabat:</strong>
+                            <div>
+                                <span th:if="${zakup.zastosowanyRabat != null && zakup.zastosowanyRabat > 0}"
+                                      class="badge bg-success"
+                                      th:text="${zakup.zastosowanyRabat} + '%'">
+                                </span>
+                                <span th:if="${zakup.zastosowanyRabat == null || zakup.zastosowanyRabat == 0}"
+                                      class="badge bg-secondary">0%</span>
+                            </div>
+                        </div>
+
+                        <div class="detail-row">
+                            <strong>Wykorzystane saldo:</strong>
+                            <div th:class="${zakup.wykorzystaneSaldo != null && zakup.wykorzystaneSaldo > 0} ? 'text-warning' : 'text-muted'"
+                                 th:text="${zakup.wykorzystaneSaldo != null ? #numbers.formatDecimal(zakup.wykorzystaneSaldo, 0, 2, 'POINT') + ' zł' : '0.00 zł'}">
+                            </div>
+                        </div>
+
+                        <div class="detail-row">
+                            <strong>Naliczona premia:</strong>
+                            <div class="text-info" th:text="${zakup.naliczonaPremia != null ? #numbers.formatDecimal(zakup.naliczonaPremia, 0, 2, 'POINT') + ' zł' : '0.00 zł'}"></div>
+                        </div>
+
+                        <div th:if="${zakup.getZaoszczedzonaKwota() != null && zakup.getZaoszczedzonaKwota().compareTo(0) > 0}" class="detail-row">
+                            <strong>Zaoszczędzona kwota:</strong>
+                            <div class="text-success fw-bold">
+                                <i class="fas fa-piggy-bank"></i>
+                                <span th:text="${#numbers.formatDecimal(zakup.getZaoszczedzonaKwota(), 0, 2, 'POINT')} + ' zł'"></span>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 text-center">
+                            <a th:href="@{/zakupy}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Powrót do listy
+                            </a>
+                            <form th:action="@{/zakupy/usun/} + ${zakup.id}"
+                                  method="post"
+                                  style="display: inline;"
+                                  onsubmit="return confirm('Czy na pewno chcesz usunąć ten zakup?');">
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-trash"></i> Usuń zakup
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const deleteForms = document.querySelectorAll('form[onsubmit]');
+        deleteForms.forEach(form => {
+            form.onsubmit = function() {
+                return confirm('Czy na pewno chcesz usunąć ten zakup?');
+            };
+        });
+    });
+</script>
+</body>
+</html>

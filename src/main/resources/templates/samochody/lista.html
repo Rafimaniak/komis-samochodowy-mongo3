@@ -219,7 +219,7 @@
             <div class="card text-white bg-primary">
                 <div class="card-body text-center">
                     <h5 class="card-title"><i class="fas fa-car"></i> Wszystkie</h5>
-                    <p class="card-text display-6" th:text="${samochody.size()}">0</p>
+                    <p class="card-text display-6" th:text="${samochody != null ? #lists.size(samochody) : 0}">0</p>
                 </div>
             </div>
         </div>
@@ -345,10 +345,10 @@
         </table>
     </div>
 
-    <div th:if="${samochody.empty}" class="alert alert-info text-center">
+    <div th:if="${samochody == null or samochody.empty}" class="alert alert-info text-center">
         <i class="fas fa-car fa-2x mb-3"></i><br>
-        <span th:if="${hasSearchParams}">Nie znaleziono samochodów spełniających podane kryteria.</span>
-        <span th:if="${not hasSearchParams}">Brak samochodów w bazie danych.</span>
+        <span th:if="${hasSearchParams != null and hasSearchParams}">Nie znaleziono samochodów spełniających podane kryteria.</span>
+        <span th:if="${hasSearchParams != null and not hasSearchParams}">Brak samochodów w bazie danych.</span>
         <div class="mt-3" sec:authorize="hasRole('ADMIN')">
             <a href="/samochody/nowy" class="btn btn-success">
                 <i class="fas fa-plus"></i> Dodaj pierwszy samochód

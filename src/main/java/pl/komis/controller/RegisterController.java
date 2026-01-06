@@ -84,9 +84,9 @@ public class RegisterController {
                 klient.setEmail(registerRequest.getEmail());
                 klient.setTelefon(registerRequest.getTelefon());
                 klient.setLiczbaZakupow(0);
-                klient.setProcentPremii(BigDecimal.ZERO);
-                klient.setSaldoPremii(BigDecimal.ZERO);
-                klient.setTotalWydane(BigDecimal.ZERO);
+                klient.setProcentPremii(0.0);
+                klient.setSaldoPremii(0.0);
+                klient.setTotalWydane(0.0);
             }
 
             // Zapisz klienta
@@ -100,7 +100,7 @@ public class RegisterController {
             );
 
             // PRZYPISZ KLIENTA DO UŻYTKOWNIKA - teraz pole klient jest @DBRef
-            user.setKlient(savedKlient);
+            user.setKlientId(savedKlient.getId());
             user.setCreatedAt(LocalDateTime.now());
 
             // Zapisz użytkownika z przypisanym klientem

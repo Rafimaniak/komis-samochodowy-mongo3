@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Wyszukiwanie</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="container mt-4">
+        <h1 class="mb-4">Wyszukiwanie samochodów</h1>
+
+        <!-- Formularz wyszukiwania -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form th:action="@{/search}" method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="marka" class="form-label">Marka</label>
+                        <input type="text" class="form-control" id="marka" name="marka"
+                               placeholder="np. Audi, BMW, Mercedes">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="model" class="form-label">Model</label>
+                        <input type="text" class="form-control" id="model" name="model"
+                               placeholder="np. A4, 3 Series, C-Class">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="minCena" class="form-label">Cena od</label>
+                        <input type="number" class="form-control" id="minCena" name="minCena"
+                               placeholder="Minimalna cena">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="maxCena" class="form-label">Cena do</label>
+                        <input type="number" class="form-control" id="maxCena" name="maxCena"
+                               placeholder="Maksymalna cena">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="minRok" class="form-label">Rok od</label>
+                        <input type="number" class="form-control" id="minRok" name="minRok"
+                               placeholder="np. 2010" min="1990" max="2026">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="maxRok" class="form-label">Rok do</label>
+                        <input type="number" class="form-control" id="maxRok" name="maxRok"
+                               placeholder="np. 2024" min="1990" max="2026">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="rodzajPaliwa" class="form-label">Rodzaj paliwa</label>
+                        <select class="form-select" id="rodzajPaliwa" name="rodzajPaliwa">
+                            <option value="">Wszystkie</option>
+                            <option value="Benzyna">Benzyna</option>
+                            <option value="Diesel">Diesel</option>
+                            <option value="Hybryda">Hybryda</option>
+                            <option value="Elektryczny">Elektryczny</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="skrzyniaBiegow" class="form-label">Skrzynia biegów</label>
+                        <select class="form-select" id="skrzyniaBiegow" name="skrzyniaBiegow">
+                            <option value="">Wszystkie</option>
+                            <option value="Manualna">Manualna</option>
+                            <option value="Automatyczna">Automatyczna</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Szukaj
+                        </button>
+                        <a th:href="@{/search}" class="btn btn-secondary ms-2">Wyczyść filtry</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Wyniki wyszukiwania -->
+        <div th:if="${samochody != null and !samochody.empty}">
+            <h2 class="mb-3">Znalezione samochody: <span class="text-primary" th:text="${samochody.size()}"></span></h2>
+
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                <div class="col" th:each="samochod : ${samochody}">
+                    <div class="card h-100">
+                        <img th:src="${samochod.getZdjecieUrl()}" class="card-img-top"
+                             alt="Samochód" style="height: 200px; object-fit: cover;">
+                        <div class="card-body">
+                            <h5 class="card-title" th:text="${samochod.getMarka() + ' ' + samochod.getModel()}"></h5>
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    Rok: <span th:text="${samochod.getRokProdukcji()}"></span> |
+                                    Przebieg: <span th:text="${#numbers.formatInteger(samochod.getPrzebieg(), 0, 'POINT')}"></span> km |
+                                    Pojemność: <span th:text="${samochod.getPojemnoscSilnika()}"></span> L
+                                </small>
+                            </p>
+                            <p class="card-text">
+                                Paliwo: <span th:text="${samochod.getRodzajPaliwa()}"></span><br>
+                                Skrzynia: <span th:text="${samochod.getSkrzyniaBiegow()}"></span><br>
+                                Kolor: <span th:text="${samochod.getKolor()}"></span>
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h4 class="text-success mb-0" th:text="${'$' + #numbers.formatDecimal(samochod.getCena(), 0, 2, 'POINT')}"></h4>
+                                <span class="badge"
+                                      th:classappend="${samochod.getStatus() == 'DOSTEPNY'} ? 'bg-success' :
+                                                      ${samochod.getStatus() == 'ZAREZERWOWANY'} ? 'bg-warning' : 'bg-secondary'"
+                                      th:text="${samochod.getStatus()}"></span>
+                            </div>
+                            <div class="mt-3">
+                                <a th:href="@{/samochody/szczegoly/{id}(id=${samochod.getId()})}"
+                                   class="btn btn-primary btn-sm">
+                                    Szczegóły
+                                </a>
+                                <th:block th:if="${samochod.getStatus() == 'DOSTEPNY'}">
+                                    <a th:href="@{/samochody/zarezerwuj(id=${samochod.getId()})}"
+                                       class="btn btn-warning btn-sm ms-2">
+                                        Zarezerwuj
+                                    </a>
+                                </th:block>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Brak wyników -->
+        <div th:if="${samochody != null and samochody.empty}" class="text-center py-5">
+            <div class="alert alert-info">
+                <h4 class="alert-heading">Brak wyników</h4>
+                <p>Nie znaleziono samochodów spełniających podane kryteria wyszukiwania.</p>
+                <hr>
+                <p class="mb-0">
+                    <a th:href="@{/samochody}" class="alert-link">Zobacz wszystkie dostępne samochody</a>
+                </p>
+            </div>
+        </div>
+
+        <!-- Informacja o pustym wyszukiwaniu -->
+        <div th:if="${samochody == null}" class="text-center py-5">
+            <div class="alert alert-light">
+                <h4 class="alert-heading">Wyszukiwanie samochodów</h4>
+                <p>Użyj formularza powyżej, aby wyszukać samochody według wybranych kryteriów.</p>
+                <hr>
+                <p class="mb-0">Możesz wyszukiwać po marce, modelu, cenie, roku produkcji i innych parametrach.</p>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
