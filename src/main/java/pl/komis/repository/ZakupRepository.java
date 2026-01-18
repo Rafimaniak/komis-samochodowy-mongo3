@@ -16,9 +16,6 @@ public interface ZakupRepository extends MongoRepository<Zakup, String> {
     @Query("{'klient_id': ?0}")
     List<Zakup> findByKlientId(String klientId);
 
-    // USUŃ TĘ LINIĘ - metoda jest niepoprawna
-    // List<Zakup> findByKlient_Id(String klientId);
-
     @Query("{'pracownik_id': ?0}")
     List<Zakup> findByPracownikId(String pracownikId);
 

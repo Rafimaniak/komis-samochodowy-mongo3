@@ -28,8 +28,6 @@ public class MongoDBFunctionsInitializer implements CommandLineRunner {
 
             // Zamiast eval, używamy natywnych metod Spring Data MongoDB
             initCzyscRezerwacje();
-            initStatystykiZakupow();
-            initStatystykiKlientow();
 
             log.info("Funkcje MongoDB zainicjalizowane pomyślnie");
         } catch (Exception e) {
@@ -71,15 +69,5 @@ public class MongoDBFunctionsInitializer implements CommandLineRunner {
         } catch (Exception e) {
             log.error("Błąd podczas czyszczenia rezerwacji: {}", e.getMessage());
         }
-    }
-
-    private void initStatystykiZakupow() {
-        log.info("Inicjalizacja statystyk zakupów...");
-        // Statystyki będą realizowane przez serwisy, nie przez eval
-    }
-
-    private void initStatystykiKlientow() {
-        log.info("Inicjalizacja statystyk klientów...");
-        // Statystyki będą realizowane przez serwisy, nie przez eval
     }
 }

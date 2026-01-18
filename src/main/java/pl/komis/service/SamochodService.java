@@ -128,79 +128,6 @@ public class SamochodService {
         return wyniki != null ? wyniki : Collections.emptyList();
     }
 
-    // 4. Konwersja wyników z funkcji MongoDB na obiekty Samochod
-    private List<Samochod> konwertujWynikiNaSamochody(List<Map<String, Object>> wyniki) {
-        return wyniki.stream()
-                .map(this::mapToSamochod)
-                .collect(Collectors.toList());
-    }
-
-    // 5. Metoda pomocnicza do konwersji Map -> Samochod
-    private Samochod mapToSamochod(Map<String, Object> mapa) {
-        Samochod samochod = new Samochod();
-
-        // PRAWIDŁOWA OBSŁUGA ID
-        if (mapa.containsKey("_id")) {
-            Object idObj = mapa.get("_id");
-            if (idObj instanceof org.bson.types.ObjectId) {
-                // Konwertuj ObjectId na String
-                samochod.setId(((org.bson.types.ObjectId) idObj).toString());
-            } else {
-                // Jeśli już jest String, użyj bezpośrednio
-                samochod.setId(idObj.toString());
-            }
-        } else if (mapa.containsKey("id")) {
-            samochod.setId(mapa.get("id").toString());
-        }
-
-        if (mapa.containsKey("marka")) {
-            samochod.setMarka(mapa.get("marka").toString());
-        }
-        if (mapa.containsKey("model")) {
-            samochod.setModel(mapa.get("model").toString());
-        }
-        if (mapa.containsKey("cena")) {
-            Object cena = mapa.get("cena");
-            if (cena != null) {
-                if (cena instanceof Number) {
-                    samochod.setCena(((Number) cena).doubleValue());
-                } else if (cena instanceof String) {
-                    try {
-                        samochod.setCena(Double.parseDouble((String) cena));
-                    } catch (NumberFormatException e) {
-                        log.warn("Nieprawidłowy format ceny: {}", cena);
-                    }
-                }
-            }
-        }
-        if (mapa.containsKey("status")) {
-            samochod.setStatus(mapa.get("status").toString());
-        }
-        if (mapa.containsKey("rokProdukcji")) {
-            Object rok = mapa.get("rokProdukcji");
-            if (rok != null) {
-                if (rok instanceof Number) {
-                    samochod.setRokProdukcji(((Number) rok).intValue());
-                } else if (rok instanceof String) {
-                    try {
-                        samochod.setRokProdukcji(Integer.parseInt((String) rok));
-                    } catch (NumberFormatException e) {
-                        log.warn("Nieprawidłowy format roku: {}", rok);
-                    }
-                }
-            }
-        }
-        if (mapa.containsKey("przebieg")) {
-            Object przebieg = mapa.get("przebieg");
-            if (przebieg != null) {
-                if (przebieg instanceof Number) {
-                    samochod.setPrzebieg((int) ((Number) przebieg).doubleValue());
-                }
-            }
-        }
-
-        return samochod;
-    }
 
     // 6. Podstawowe operacje CRUD
     public List<Samochod> findAll() {
@@ -318,16 +245,6 @@ public class SamochodService {
         return mongoTemplate.find(query, Samochod.class);
     }
 
-    public List<Map<String, Object>> wyszukajSamochodyJakoMap(Map<String, Object> kryteria) {
-        List<Samochod> samochody = wyszukajSamochody(kryteria);
-        return konwertujDoMap(samochody);
-    }
-
-    private List<Map<String, Object>> konwertujDoMap(List<Samochod> samochody) {
-        return samochody.stream()
-                .map(this::samochodDoMap)
-                .collect(Collectors.toList());
-    }
 
     private Map<String, Object> samochodDoMap(Samochod samochod) {
         Map<String, Object> map = new HashMap<>();

@@ -64,7 +64,7 @@ public class KlientController {
         model.addAttribute("totalWydane", totalWydane);
         model.addAttribute("klienciZPremia", klienciZPremia);
         model.addAttribute("tytul", "Lista Klientów");
-        return "klienci";
+        return "klienci/lista";
     }
 
     @GetMapping("/{id}")

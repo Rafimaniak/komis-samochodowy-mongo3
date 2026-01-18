@@ -53,11 +53,4 @@ public class AdminController {
 
         return "admin/panel";
     }
-
-    @GetMapping("/dashboard")
-    public String dashboard(Model model) {
-        Map<String, Object> stats = adminService.getDashboardStats();
-        model.addAllAttributes(stats);
-        return "admin/dashboard";
-    }
 }

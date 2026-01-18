@@ -89,7 +89,7 @@
 <!-- Fixed Navigation -->
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top navbar-custom">
     <div class="container-fluid">
-        <a class="navbar-brand" href="/">
+        <a class="navbar-brand" href="/static">
             <i class="fas fa-car"></i> Komis Samochodowy
         </a>
 
@@ -103,22 +103,22 @@
             <!-- Menu dla admina -->
             <ul class="navbar-nav" sec:authorize="hasRole('ADMIN')">
                 <li class="nav-item">
-                    <a class="nav-link" th:href="@{/admin}"><i class="fas fa-tachometer-alt"></i> Panel Admina</a>
+                    <a class="nav-link" th:href="@{/templates/admin}"><i class="fas fa-tachometer-alt"></i> Panel Admina</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" th:href="@{/admin/users}"><i class="fas fa-user-friends"></i> Użytkownicy</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link active" th:href="@{/klienci}"><i class="fas fa-users"></i> Klienci</a>
+                    <a class="nav-link active" th:href="@{/templates/klienci}"><i class="fas fa-users"></i> Klienci</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" th:href="@{/pracownicy}"><i class="fas fa-id-badge"></i> Pracownicy</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" th:href="@{/serwis}"><i class="fas fa-tools"></i> Serwis</a>
+                    <a class="nav-link" th:href="@{/templates/serwis}"><i class="fas fa-tools"></i> Serwis</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" th:href="@{/zakupy}"><i class="fas fa-shopping-cart"></i> Wszystkie zakupy</a>
+                    <a class="nav-link" th:href="@{/templates/zakupy}"><i class="fas fa-shopping-cart"></i> Wszystkie zakupy</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" th:href="@{/zakupy/rabaty}"><i class="fas fa-gift"></i> Premie</a>
@@ -245,7 +245,7 @@
     </div>
 
     <div class="mt-3">
-        <a th:href="@{/admin}" class="btn btn-secondary">
+        <a th:href="@{/templates/admin}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Powrót do panelu
         </a>
     </div>

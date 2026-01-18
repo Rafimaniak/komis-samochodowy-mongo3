@@ -153,36 +153,6 @@ public class SamochodController {
         }
     }
 
-    @PostMapping("/zarezerwuj/{id}")
-    public String zarezerwujSamochod(@PathVariable String id, Model model) {
-        Samochod samochod = getSamochodById(id);
-        samochod.setStatus("ZAREZERWOWANY");
-        samochodService.save(samochod);
-        return "redirect:/samochody";
-    }
-
-    @GetMapping("/edytuj/{id}")
-    public String edytujSamochod(@PathVariable String id, Model model) {
-        Samochod samochod = getSamochodById(id);
-        model.addAttribute("samochod", samochod);
-        return "samochody/formularz";
-    }
-
-    @PostMapping("/aktualizuj/{id}")
-    public String aktualizujSamochod(@PathVariable String id,
-                                     @ModelAttribute Samochod samochod,
-                                     Model model) {
-        try {
-            getSamochodById(id); // Sprawdź czy istnieje
-            samochod.setId(id);
-            samochodService.save(samochod);
-            return "redirect:/samochody";
-        } catch (RuntimeException e) {
-            model.addAttribute("error", "Samochód nie istnieje");
-            return "error";
-        }
-    }
-
     @GetMapping("/edytuj")
     @PreAuthorize("hasRole('ADMIN')")
     public String formEdycjaSamochodu(@RequestParam("id") String id, Model model) {
@@ -192,70 +162,6 @@ public class SamochodController {
         return "samochody/form";
     }
 
-    @PostMapping("/edytuj")
-    @PreAuthorize("hasRole('ADMIN')")
-    public String aktualizujSamochod(@ModelAttribute Samochod samochod,
-                                     @RequestParam("id") String id,
-                                     @RequestParam(value = "zdjeciePlik", required = false) MultipartFile zdjeciePlik,
-                                     @RequestParam(value = "usunZdjecie", required = false, defaultValue = "false") boolean usunZdjecie,
-                                     RedirectAttributes redirectAttributes) {
-        try {
-            Samochod starySamochod = getSamochodById(id);
-
-            // Obsługa zdjęcia
-            if (usunZdjecie) {
-                samochod.setZdjecieNazwa(null);
-                if (starySamochod.getZdjecieNazwa() != null) {
-                    bezpiecznieUsunPlikZdjęcia(starySamochod.getZdjecieNazwa(), id);
-                }
-            } else if (zdjeciePlik != null && !zdjeciePlik.isEmpty()) {
-                Path uploadPath = Paths.get(UPLOAD_DIR);
-                if (!Files.exists(uploadPath)) {
-                    Files.createDirectories(uploadPath);
-                }
-
-                String originalFileName = zdjeciePlik.getOriginalFilename();
-                String fileExtension = "";
-                if (originalFileName != null && originalFileName.contains(".")) {
-                    fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
-                }
-                String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
-
-                Path filePath = uploadPath.resolve(uniqueFileName);
-                Files.copy(zdjeciePlik.getInputStream(), filePath);
-
-                if (starySamochod.getZdjecieNazwa() != null) {
-                    bezpiecznieUsunPlikZdjęcia(starySamochod.getZdjecieNazwa(), id);
-                }
-
-                samochod.setZdjecieNazwa(uniqueFileName);
-            } else {
-                samochod.setZdjecieNazwa(starySamochod.getZdjecieNazwa());
-            }
-
-            samochod.setDataDodania(starySamochod.getDataDodania());
-            samochod.setId(id);
-
-            if (samochod.getRodzajPaliwa() == null) {
-                samochod.setRodzajPaliwa("Benzyna");
-            }
-            if (samochod.getSkrzyniaBiegow() == null) {
-                samochod.setSkrzyniaBiegow("Manualna");
-            }
-            if (samochod.getPojemnoscSilnika() == null) {
-                samochod.setPojemnoscSilnika(2.0);
-            }
-
-            samochodService.save(samochod);
-            redirectAttributes.addFlashAttribute("successMessage", "Samochód zaktualizowany pomyślnie");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Błąd: " + e.getMessage());
-            e.printStackTrace();
-            return "redirect:/samochody/edytuj?id=" + id;
-        }
-
-        return "redirect:/samochody";
-    }
 
     private void bezpiecznieUsunPlikZdjęcia(String nazwaPliku, String aktualneSamochodId) {
         if (nazwaPliku == null || nazwaPliku.isEmpty()) {
@@ -692,20 +598,6 @@ public class SamochodController {
                     "Błąd podczas anulowania rezerwacji: " + e.getMessage());
             return "redirect:/samochody/szczegoly?id=" + id;
         }
-    }
-
-    private boolean isImageUsed(String imageName) {
-        if (imageName == null || imageName.isEmpty()) {
-            return false;
-        }
-
-        List<Samochod> allCars = samochodService.findAll();
-        for (Samochod car : allCars) {
-            if (imageName.equals(car.getZdjecieNazwa())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     @GetMapping
